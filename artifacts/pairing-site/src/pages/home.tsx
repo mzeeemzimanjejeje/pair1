@@ -192,7 +192,7 @@ export function Home() {
             <>
               <div className="cx-header">
                 <h1 className="cx-title">TRUTH-MD</h1>
-                <p className="cx-subtitle">Enter your WhatsApp number with country code</p>
+                <p className="cx-subtitle">Link your WhatsApp — enter your number below to get a pairing code</p>
               </div>
 
               <form onSubmit={handleSubmit}>
@@ -231,7 +231,7 @@ export function Home() {
 
               {pairingCode && (
                 <div className="cx-result">
-                  <div className="cx-result-label">Pairing Code Generated</div>
+                  <div className="cx-result-label">Your Pairing Code</div>
                   <div className="cx-code-display">{pairingCode}</div>
                   <button
                     className={`cx-copy-btn${copied ? ' copied' : ''}`}
@@ -244,8 +244,10 @@ export function Home() {
                     )}
                   </button>
                   <div className="cx-instructions">
-                    WhatsApp → Linked Devices → Link a Device<br />
-                    → Link with phone number instead
+                    <div className="cx-step"><span className="cx-step-num">1</span>Open <b>WhatsApp</b> on your phone</div>
+                    <div className="cx-step"><span className="cx-step-num">2</span>Tap ⋮ → <b>Linked Devices</b> → <b>Link a Device</b></div>
+                    <div className="cx-step"><span className="cx-step-num">3</span>Tap <b>"Link with phone number instead"</b></div>
+                    <div className="cx-step"><span className="cx-step-num">4</span>Enter the code shown above</div>
                   </div>
                   <button className="cx-retry-btn" onClick={handleReset}>
                     <i className="fas fa-redo" style={{ marginRight: 6 }} />Try again
