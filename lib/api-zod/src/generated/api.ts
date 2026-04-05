@@ -40,6 +40,19 @@ export const RequestPairingCodeResponse = zod.object({
 });
 
 /**
+ * Returns live server statistics including uptime, visitor count, request counts
+ * @summary Get server stats
+ */
+export const GetServerStatsResponse = zod.object({
+  status: zod.enum(["online", "offline"]),
+  uptimeSeconds: zod.number(),
+  visitors: zod.number(),
+  requests: zod.number(),
+  success: zod.number(),
+  failed: zod.number(),
+});
+
+/**
  * Returns the current pairing/connection status of the bot
  * @summary Get pairing status
  */

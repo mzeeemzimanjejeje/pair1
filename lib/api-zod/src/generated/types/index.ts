@@ -13,3 +13,5 @@ export * from "./pairingCodeResponse";
 export * from "./pairingQr";
 export * from "./pairingStatus";
 export * from "./pairingStatusState";
+export * from "./serverStats";
+export * from "./serverStatsStatus";

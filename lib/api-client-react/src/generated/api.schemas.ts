@@ -46,6 +46,23 @@ export interface PairingStatus {
   state: PairingStatusState;
 }
 
+export type ServerStatsStatus =
+  (typeof ServerStatsStatus)[keyof typeof ServerStatsStatus];
+
+export const ServerStatsStatus = {
+  online: "online",
+  offline: "offline",
+} as const;
+
+export interface ServerStats {
+  status: ServerStatsStatus;
+  uptimeSeconds: number;
+  visitors: number;
+  requests: number;
+  success: number;
+  failed: number;
+}
+
 export interface ErrorResponse {
   error: string;
   message?: string;

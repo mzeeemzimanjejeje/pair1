@@ -76,6 +76,19 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /stats:
+    get:
+      operationId: getServerStats
+      tags: [pairing]
+      summary: Get server stats
+      description: Returns live server statistics including uptime, visitor count, request counts
+      responses:
+        "200":
+          description: Stats retrieved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServerStats"
   /pair/status:
     get:
       operationId: getPairingStatus
@@ -144,6 +157,29 @@ components:
       required:
         - connected
         - state
+    ServerStats:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [online, offline]
+        uptimeSeconds:
+          type: number
+        visitors:
+          type: number
+        requests:
+          type: number
+        success:
+          type: number
+        failed:
+          type: number
+      required:
+        - status
+        - uptimeSeconds
+        - visitors
+        - requests
+        - success
+        - failed
     ErrorResponse:
       type: object
       properties:

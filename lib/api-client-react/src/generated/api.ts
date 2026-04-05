@@ -23,6 +23,7 @@ import type {
   PairingCodeResponse,
   PairingQr,
   PairingStatus,
+  ServerStats,
 } from "./api.schemas";
 
 import { customFetch } from "../custom-fetch";
@@ -272,6 +273,82 @@ export const useRequestPairingCode = <
 > => {
   return useMutation(getRequestPairingCodeMutationOptions(options));
 };
+
+/**
+ * Returns live server statistics including uptime, visitor count, request counts
+ * @summary Get server stats
+ */
+export const getGetServerStatsUrl = () => {
+  return `/api/stats`;
+};
+
+export const getServerStats = async (
+  options?: RequestInit,
+): Promise<ServerStats> => {
+  return customFetch<ServerStats>(getGetServerStatsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetServerStatsQueryKey = () => {
+  return [`/api/stats`] as const;
+};
+
+export const getGetServerStatsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getServerStats>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getServerStats>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetServerStatsQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getServerStats>>> = ({
+    signal,
+  }) => getServerStats({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getServerStats>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetServerStatsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getServerStats>>
+>;
+export type GetServerStatsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get server stats
+ */
+
+export function useGetServerStats<
+  TData = Awaited<ReturnType<typeof getServerStats>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getServerStats>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetServerStatsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
 
 /**
  * Returns the current pairing/connection status of the bot
