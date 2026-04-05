@@ -104,4 +104,47 @@ router.get("/status", async (req: Request, res: Response) => {
   }
 });
 
+router.post("/reset", async (req: Request, res: Response) => {
+  try {
+    const session = getSession();
+    const state = session.getState();
+
+    if (state.connected) {
+      return res.status(400).json({
+        error: "already_connected",
+        message: "Cannot reset an active connected session",
+      });
+    }
+
+    // Clear auth and restart
+    const sessionDir = (session as any).sessionDir as string;
+    const fs = await import("fs");
+    fs.rmSync(sessionDir, { recursive: true, force: true });
+    fs.mkdirSync(sessionDir, { recursive: true });
+
+    session.sessionState = {
+      connected: false,
+      phone: null,
+      state: "connecting",
+      qr: null,
+      qrExpiry: null,
+      pairingCode: null,
+    };
+
+    setTimeout(() => {
+      session.start().catch((err: unknown) => {
+        req.log.error({ err }, "Failed to restart session after reset");
+      });
+    }, 500);
+
+    return res.status(200).json({ message: "Session reset, new QR will be generated" });
+  } catch (err) {
+    req.log.error({ err }, "Failed to reset session");
+    return res.status(503).json({
+      error: "reset_failed",
+      message: "Failed to reset pairing session",
+    });
+  }
+});
+
 export default router;

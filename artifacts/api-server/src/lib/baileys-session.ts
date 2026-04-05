@@ -31,7 +31,7 @@ export interface SessionState {
 
 class BaileysSession extends EventEmitter {
   private sock: WASocket | null = null;
-  private sessionDir: string;
+  public sessionDir: string;
   public sessionState: SessionState = {
     connected: false,
     phone: null,
@@ -93,22 +93,32 @@ class BaileysSession extends EventEmitter {
 
         if (connection === "close") {
           const statusCode = (lastDisconnect?.error as Boom)?.output?.statusCode;
-          const shouldReconnect =
-            statusCode !== DisconnectReason.loggedOut;
+          const isLoggedOut = statusCode === DisconnectReason.loggedOut || statusCode === 401;
 
-          logger.info({ statusCode, shouldReconnect }, "Connection closed");
+          logger.info({ statusCode, isLoggedOut }, "Connection closed");
+
+          // If logged out / credentials rejected, wipe the session so we can re-pair fresh
+          if (isLoggedOut) {
+            try {
+              fs.rmSync(this.sessionDir, { recursive: true, force: true });
+              fs.mkdirSync(this.sessionDir, { recursive: true });
+              logger.info("Cleared auth session for fresh pairing");
+            } catch (e) {
+              logger.error({ e }, "Failed to clear auth session");
+            }
+          }
 
           this.sessionState = {
             ...this.sessionState,
             connected: false,
-            state: shouldReconnect ? "connecting" : "disconnected",
+            state: "connecting",
             qr: null,
+            pairingCode: null,
           };
           this.emit("state-change", this.sessionState);
 
-          if (shouldReconnect) {
-            setTimeout(() => this.start(), 3000);
-          }
+          // Always reconnect — a fresh QR will be generated if credentials were cleared
+          setTimeout(() => this.start(), 3000);
         } else if (connection === "open") {
           const phone = this.sock?.user?.id?.split(":")[0] || null;
           this.sessionState = {
