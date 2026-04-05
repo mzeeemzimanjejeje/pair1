@@ -582,6 +582,69 @@ body {
   font-size: 0.9rem;
 }
 
+/* ── Status badge ── */
+
+.cx-status-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 500;
+  margin: 0 auto 14px;
+  width: fit-content;
+  border: 1px solid transparent;
+  transition: all 0.3s;
+}
+
+.cx-badge-idle {
+  background: rgba(0, 240, 255, 0.08);
+  border-color: rgba(0, 240, 255, 0.2);
+  color: #00f0ff;
+}
+
+.cx-badge-busy {
+  background: rgba(180, 100, 255, 0.12);
+  border-color: rgba(180, 100, 255, 0.3);
+  color: #b464ff;
+}
+
+.cx-badge-active {
+  background: rgba(46, 204, 113, 0.1);
+  border-color: rgba(46, 204, 113, 0.3);
+  color: #2ecc71;
+}
+
+.cx-badge-wait {
+  background: rgba(243, 156, 18, 0.1);
+  border-color: rgba(243, 156, 18, 0.3);
+  color: #f39c12;
+}
+
+.cx-badge-ok {
+  background: rgba(46, 204, 113, 0.15);
+  border-color: rgba(46, 204, 113, 0.4);
+  color: #2ecc71;
+}
+
+.cx-badge-warn {
+  background: rgba(243, 156, 18, 0.1);
+  border-color: rgba(243, 156, 18, 0.3);
+  color: #f39c12;
+}
+
+.cx-badge-err {
+  background: rgba(255, 56, 96, 0.1);
+  border-color: rgba(255, 56, 96, 0.3);
+  color: #ff3860;
+  max-width: 100%;
+  text-align: center;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
 /* ── Responsive ── */
 
 @media (max-width: 768px) {

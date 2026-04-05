@@ -15,4 +15,5 @@ export const PairingStatusState = {
   disconnected: "disconnected",
   qr_ready: "qr_ready",
   code_ready: "code_ready",
+  waiting_confirm: "waiting_confirm",
 } as const;

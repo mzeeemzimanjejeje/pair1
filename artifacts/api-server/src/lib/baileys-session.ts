@@ -10,25 +10,46 @@ import { Boom } from "@hapi/boom";
 import { logger } from "./logger";
 import path from "path";
 import fs from "fs";
-import QRCode from "qrcode";
 import { EventEmitter } from "events";
 
+// ─── Types ────────────────────────────────────────────────────────────────────
+
 export type BotState =
-  | "connecting"
-  | "connected"
-  | "disconnected"
-  | "qr_ready"
-  | "code_ready";
+  | "connecting"       // Starting up / reconnecting
+  | "qr_ready"         // QR available (fallback)
+  | "code_ready"       // Pairing code issued, waiting for user to enter it
+  | "waiting_confirm"  // Code entered (countdown done), waiting for WhatsApp ack
+  | "connected"        // Fully linked
+  | "disconnected";    // Terminal / logged out
 
 export interface SessionState {
   connected: boolean;
   phone: string | null;
   state: BotState;
-  qr: string | null;
-  qrExpiry: number | null;
   pairingCode: string | null;
   codeIssuedAt: number | null;
+  lastError: string | null;
 }
+
+// ─── Rate limiter ─────────────────────────────────────────────────────────────
+
+const CODE_COOLDOWN_MS = 30_000; // 30 s between requests for the same number
+const lastCodeRequest = new Map<string, number>();
+
+export function checkRateLimit(phone: string): { ok: boolean; retryInMs: number } {
+  const last = lastCodeRequest.get(phone) ?? 0;
+  const elapsed = Date.now() - last;
+  if (elapsed < CODE_COOLDOWN_MS) {
+    return { ok: false, retryInMs: CODE_COOLDOWN_MS - elapsed };
+  }
+  return { ok: true, retryInMs: 0 };
+}
+
+function recordCodeRequest(phone: string) {
+  lastCodeRequest.set(phone, Date.now());
+}
+
+// ─── Session class ────────────────────────────────────────────────────────────
 
 class BaileysSession extends EventEmitter {
   private sock: WASocket | null = null;
@@ -37,11 +58,10 @@ class BaileysSession extends EventEmitter {
   public sessionState: SessionState = {
     connected: false,
     phone: null,
-    state: "disconnected",
-    qr: null,
-    qrExpiry: null,
+    state: "connecting",
     pairingCode: null,
     codeIssuedAt: null,
+    lastError: null,
   };
 
   constructor() {
@@ -52,15 +72,24 @@ class BaileysSession extends EventEmitter {
     }
   }
 
+  // ── Helpers ──────────────────────────────────────────────────────────────
+
+  private setState(patch: Partial<SessionState>) {
+    this.sessionState = { ...this.sessionState, ...patch };
+    this.emit("state-change", this.sessionState);
+  }
+
   private clearAuthDir() {
     try {
       fs.rmSync(this.sessionDir, { recursive: true, force: true });
       fs.mkdirSync(this.sessionDir, { recursive: true });
-      logger.info("Cleared auth session for fresh pairing");
+      logger.info("Auth session cleared for fresh pairing");
     } catch (e) {
       logger.error({ e }, "Failed to clear auth session");
     }
   }
+
+  // ── Core start ───────────────────────────────────────────────────────────
 
   async start() {
     try {
@@ -71,7 +100,7 @@ class BaileysSession extends EventEmitter {
         this.sessionDir,
       );
 
-      // Only persist credentials once the device is fully linked
+      // Guard: only persist credentials after a real connection open
       let fullyConnected = false;
       const guardedSaveCreds = async () => {
         if (fullyConnected) await saveCreds();
@@ -84,141 +113,164 @@ class BaileysSession extends EventEmitter {
         logger: logger.child({ level: "silent" }) as any,
         browser: ["TRUTH-MD:~", "Chrome", "1.0.0"],
         generateHighQualityLinkPreview: false,
+        // Keep the socket alive longer so the code stays valid
+        keepAliveIntervalMs: 10_000,
       });
 
-      this.sock.ev.on("connection.update", async (update: Partial<ConnectionState>) => {
-        const { connection, lastDisconnect, qr } = update;
+      this.setState({ state: "connecting", lastError: null });
+      logger.info("Baileys session started");
 
-        if (qr) {
-          logger.info("QR code generated");
-          // Only show QR if no pairing code has been issued yet
-          if (!this.sessionState.pairingCode) {
-            try {
-              const qrDataUrl = await QRCode.toDataURL(qr, {
-                errorCorrectionLevel: "M",
-                margin: 2,
-                color: { dark: "#00FF41", light: "#0D0D0D" },
-              });
-              this.sessionState = {
-                ...this.sessionState,
-                qr: qrDataUrl,
-                qrExpiry: Date.now() + 60000,
-                state: "qr_ready",
-                connected: false,
-              };
-              this.emit("state-change", this.sessionState);
-            } catch (err) {
-              logger.error({ err }, "Failed to generate QR code");
+      this.sock.ev.on(
+        "connection.update",
+        async (update: Partial<ConnectionState>) => {
+          const { connection, lastDisconnect, qr } = update;
+
+          // QR received – only surface it if we haven't issued a pairing code yet
+          if (qr && !this.sessionState.pairingCode) {
+            logger.info("QR code generated");
+            this.setState({ state: "qr_ready" });
+          }
+
+          if (connection === "connecting") {
+            this.setState({ state: "connecting" });
+          }
+
+          if (connection === "open") {
+            fullyConnected = true;
+            await saveCreds();
+
+            const phone = this.sock?.user?.id?.split(":")[0] ?? null;
+            this.setState({
+              connected: true,
+              phone,
+              state: "connected",
+              pairingCode: null,
+              codeIssuedAt: null,
+              lastError: null,
+            });
+            logger.info({ phone }, "WhatsApp linked successfully");
+          }
+
+          if (connection === "close") {
+            const err = lastDisconnect?.error as Boom | undefined;
+            const statusCode = err?.output?.statusCode;
+            const isLoggedOut =
+              statusCode === DisconnectReason.loggedOut || statusCode === 401;
+            const isQrTimeout = statusCode === 408;
+
+            logger.info({ statusCode, isLoggedOut }, "Connection closed");
+
+            // Categorise the error for the UI
+            let lastError: string | null = null;
+            if (isLoggedOut) {
+              lastError = "Logged out by WhatsApp. Please pair again.";
+            } else if (isQrTimeout) {
+              lastError = "Pairing timed out. Please generate a new code.";
+            } else if (statusCode === 503 || statusCode === 500) {
+              lastError = "WhatsApp server error. Retrying…";
+            } else if (!navigator || statusCode === undefined) {
+              // node context – network drop
+              lastError = "Network error. Reconnecting…";
+            }
+
+            // Wipe stale credentials on logout or QR timeout
+            if (isLoggedOut || isQrTimeout) {
+              fullyConnected = false;
+              this.clearAuthDir();
+            }
+
+            this.setState({
+              connected: false,
+              phone: null,
+              state: isLoggedOut ? "disconnected" : "connecting",
+              pairingCode: null,
+              codeIssuedAt: null,
+              lastError,
+            });
+
+            // Always reconnect unless deliberately logged out
+            if (!isLoggedOut) {
+              const delay = isQrTimeout ? 2_000 : 5_000;
+              setTimeout(() => this.start(), delay);
             }
           }
-        }
-
-        if (connection === "close") {
-          const statusCode = (lastDisconnect?.error as Boom)?.output?.statusCode;
-          const isLoggedOut = statusCode === DisconnectReason.loggedOut || statusCode === 401;
-          const isQrTimeout = statusCode === 408;
-
-          logger.info({ statusCode, isLoggedOut }, "Connection closed");
-
-          // Wipe stale credentials on logout or QR timeout
-          if (isLoggedOut || isQrTimeout) {
-            fullyConnected = false;
-            this.clearAuthDir();
-          }
-
-          this.sessionState = {
-            ...this.sessionState,
-            connected: false,
-            state: "connecting",
-            qr: null,
-            pairingCode: null,
-            codeIssuedAt: null,
-          };
-          this.emit("state-change", this.sessionState);
-
-          setTimeout(() => this.start(), 3000);
-        } else if (connection === "open") {
-          fullyConnected = true;
-          await saveCreds();
-
-          const phone = this.sock?.user?.id?.split(":")[0] || null;
-          this.sessionState = {
-            ...this.sessionState,
-            connected: true,
-            phone,
-            state: "connected",
-            qr: null,
-            qrExpiry: null,
-            pairingCode: null,
-            codeIssuedAt: null,
-          };
-          logger.info({ phone }, "WhatsApp device linked successfully!");
-          this.emit("state-change", this.sessionState);
-        } else if (connection === "connecting") {
-          this.sessionState = {
-            ...this.sessionState,
-            state: "connecting",
-          };
-          this.emit("state-change", this.sessionState);
-        }
-      });
+        },
+      );
 
       this.sock.ev.on("creds.update", guardedSaveCreds);
-
-      logger.info("Baileys session started");
     } catch (err) {
       logger.error({ err }, "Failed to start Baileys session");
-      this.sessionState = {
-        ...this.sessionState,
-        state: "disconnected",
+      this.setState({
+        state: "connecting",
         connected: false,
-      };
-      setTimeout(() => this.start(), 5000);
+        lastError: "Internal error starting session. Retrying…",
+      });
+      setTimeout(() => this.start(), 5_000);
     }
   }
 
+  // ── Pairing code request ─────────────────────────────────────────────────
+
   async requestPairingCode(phoneNumber: string): Promise<string> {
     if (!this.sock) {
-      throw new Error("Socket not initialized. Please wait for connection.");
+      throw new Error("Socket not ready. Please wait a moment and try again.");
+    }
+
+    if (this.sessionState.connected) {
+      throw new Error("Already connected — no pairing needed.");
     }
 
     const cleanPhone = phoneNumber.replace(/\D/g, "");
     if (!cleanPhone || cleanPhone.length < 7) {
-      throw new Error("Invalid phone number");
+      throw new Error("Invalid phone number. Include the country code (e.g. 254712345678).");
     }
 
-    const code = await this.sock.requestPairingCode(cleanPhone);
-    const formattedCode = code?.match(/.{1,4}/g)?.join("-") || code;
+    // Server-side rate limit
+    const { ok, retryInMs } = checkRateLimit(cleanPhone);
+    if (!ok) {
+      const seconds = Math.ceil(retryInMs / 1000);
+      throw new Error(`Please wait ${seconds}s before requesting a new code.`);
+    }
 
-    this.sessionState = {
-      ...this.sessionState,
+    const raw = await this.sock.requestPairingCode(cleanPhone);
+    // Ensure XXXX-XXXX format
+    const code = raw?.replace(/-/g, "").match(/.{1,4}/g)?.join("-") ?? raw;
+
+    recordCodeRequest(cleanPhone);
+
+    this.setState({
       state: "code_ready",
-      pairingCode: formattedCode,
+      pairingCode: code,
       codeIssuedAt: Date.now(),
-      qr: null,
-    };
-    this.emit("state-change", this.sessionState);
+      lastError: null,
+    });
 
-    logger.info({ phone: cleanPhone, code: formattedCode }, "Pairing code issued");
-    return formattedCode;
+    logger.info({ phone: cleanPhone, code }, "Pairing code issued");
+    return code;
   }
 
-  clearPendingPhone() {
-    // No-op kept for route compatibility
+  // Mark code as entered (frontend calls this to transition to waiting_confirm)
+  markCodeEntered() {
+    if (this.sessionState.state === "code_ready") {
+      this.setState({ state: "waiting_confirm" });
+    }
   }
+
+  // ── Accessors ────────────────────────────────────────────────────────────
+
+  clearPendingPhone() { /* no-op: kept for route compatibility */ }
 
   getState(): SessionState {
     return this.sessionState;
   }
 
-  getQr(): { qr: string; expiry: number } | null {
-    if (!this.sessionState.qr) return null;
-    return {
-      qr: this.sessionState.qr,
-      expiry: this.sessionState.qrExpiry || Date.now() + 60000,
-    };
+  // Kept for route compatibility (QR fallback)
+  getQr(): null {
+    return null;
   }
 }
+
+// ─── Singleton ────────────────────────────────────────────────────────────────
 
 let sessionInstance: BaileysSession | null = null;
 
@@ -226,7 +278,7 @@ export function getSession(): BaileysSession {
   if (!sessionInstance) {
     sessionInstance = new BaileysSession();
     sessionInstance.start().catch((err) => {
-      logger.error({ err }, "Failed to initialize session");
+      logger.error({ err }, "Failed to initialise session");
     });
   }
   return sessionInstance;

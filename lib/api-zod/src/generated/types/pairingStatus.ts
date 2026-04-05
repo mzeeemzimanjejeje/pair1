@@ -17,4 +17,6 @@ export interface PairingStatus {
   pairingCode?: string | null;
   /** Unix timestamp (ms) when the current code was issued */
   codeIssuedAt?: number | null;
+  /** Human-readable error message from last failure */
+  lastError?: string | null;
 }
