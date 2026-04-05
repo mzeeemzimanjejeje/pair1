@@ -42,7 +42,7 @@ export function Home() {
   const [countdown, setCountdown] = useState<number | null>(null);
   const [codeExpired, setCodeExpired] = useState(false);
 
-  const { data: status } = useGetPairingStatus({ query: { refetchInterval: 4000 } });
+  const { data: status } = useGetPairingStatus({ query: { refetchInterval: 3000 } });
   const { data: stats } = useGetServerStats({ query: { refetchInterval: 5000 } });
 
   useEffect(() => {
@@ -53,6 +53,14 @@ export function Home() {
     const id = setInterval(() => setLiveUptime((prev) => prev + 1), 1000);
     return () => clearInterval(id);
   }, []);
+
+  // If we're showing a code but the server has wiped it (session restart), mark expired immediately
+  useEffect(() => {
+    if (pairingCode && !codeExpired && status && !status.pairingCode) {
+      setCodeExpired(true);
+      setCountdown(0);
+    }
+  }, [status?.pairingCode, pairingCode, codeExpired]);
 
   // Countdown ticker — runs from CODE_TTL_SECONDS down to 0
   useEffect(() => {
@@ -117,6 +125,14 @@ export function Home() {
     setPhone('');
     setPhoneError('');
     requestMutation.reset();
+  }
+
+  function handleRefreshCode() {
+    if (!phone) return;
+    setPairingCode(null);
+    setCountdown(null);
+    setCodeExpired(false);
+    requestMutation.mutate({ data: { phoneNumber: phone } });
   }
 
   const uptime = stats ? formatUptime(liveUptime) : 'Loading...';
@@ -223,9 +239,22 @@ export function Home() {
               {pairingCode && (
                 <div className="cx-result">
                   {codeExpired ? (
-                    <div className="cx-expired-banner">
-                      <i className="fas fa-exclamation-triangle" style={{ marginRight: 8 }} />
-                      Code expired — enter your number again and click Generate New Code
+                    <div style={{ textAlign: 'center' }}>
+                      <div className="cx-expired-banner">
+                        <i className="fas fa-exclamation-triangle" style={{ marginRight: 8 }} />
+                        Session expired — this code is no longer valid
+                      </div>
+                      {requestMutation.isPending ? (
+                        <div className="cx-loading" style={{ margin: '12px 0' }}>
+                          <div className="cx-spinner" />
+                          <div className="cx-loading-text">Getting fresh code...</div>
+                        </div>
+                      ) : (
+                        <button className="cx-btn" style={{ marginTop: 8 }} onClick={handleRefreshCode}>
+                          <i className="fas fa-sync-alt" style={{ marginRight: 8 }} />
+                          Get Fresh Code
+                        </button>
+                      )}
                     </div>
                   ) : (
                     <>
@@ -254,9 +283,11 @@ export function Home() {
                     </>
                   )}
 
-                  <button className="cx-retry-btn" onClick={handleReset}>
-                    <i className="fas fa-redo" style={{ marginRight: 6 }} />Try again
-                  </button>
+                  {!codeExpired && (
+                    <button className="cx-retry-btn" onClick={handleReset}>
+                      <i className="fas fa-redo" style={{ marginRight: 6 }} />Use different number
+                    </button>
+                  )}
                 </div>
               )}
             </>
