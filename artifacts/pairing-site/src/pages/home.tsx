@@ -37,9 +37,22 @@ export function Home() {
   const [phoneError, setPhoneError] = useState('');
   const [pairingCode, setPairingCode] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [liveUptime, setLiveUptime] = useState(0);
 
   const { data: status } = useGetPairingStatus({ query: { refetchInterval: 4000 } });
   const { data: stats } = useGetServerStats({ query: { refetchInterval: 5000 } });
+
+  // Sync from server on every API refresh, then tick every second locally
+  useEffect(() => {
+    if (stats?.uptimeSeconds !== undefined) {
+      setLiveUptime(stats.uptimeSeconds);
+    }
+  }, [stats?.uptimeSeconds]);
+
+  useEffect(() => {
+    const id = setInterval(() => setLiveUptime((prev) => prev + 1), 1000);
+    return () => clearInterval(id);
+  }, []);
 
   const requestMutation = useRequestPairingCode({
     mutation: {
@@ -87,7 +100,7 @@ export function Home() {
     requestMutation.reset();
   }
 
-  const uptime = stats ? formatUptime(stats.uptimeSeconds) : 'Loading...';
+  const uptime = stats ? formatUptime(liveUptime) : 'Loading...';
   const visitors = stats ? stats.visitors.toLocaleString() : '0';
   const requests = stats ? stats.requests.toLocaleString() : '0';
   const success = stats ? stats.success.toLocaleString() : '0';
