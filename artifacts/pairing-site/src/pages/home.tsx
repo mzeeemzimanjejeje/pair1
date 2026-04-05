@@ -95,7 +95,12 @@ export function Home() {
 
   return (
     <>
-      <div className="cx-bg-animation" />
+      {/* CypherX.space aurora background */}
+      <div className="cx-bg-animation">
+        <div className="cx-aurora-layer cx-aurora-1" />
+        <div className="cx-aurora-layer cx-aurora-2" />
+        <div className="cx-aurora-layer cx-aurora-3" />
+      </div>
       <div className="cx-cyber-grid" />
       <Particles />
 

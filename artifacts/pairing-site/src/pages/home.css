@@ -14,11 +14,13 @@
 }
 
 body {
-  background: linear-gradient(135deg, #05050c 0%, #0f0f23 50%, #0a0a14 100%) !important;
+  background: #0f172a !important;
   font-family: 'Space Grotesk', sans-serif !important;
   min-height: 100vh;
   overflow-x: hidden;
 }
+
+/* ── CypherX.space Aurora Background ── */
 
 .cx-bg-animation {
   position: fixed;
@@ -27,19 +29,44 @@ body {
   width: 100%;
   height: 100%;
   z-index: 0;
-  background:
-    radial-gradient(circle at 20% 80%, rgba(0, 240, 255, 0.1) 0%, transparent 50%),
-    radial-gradient(circle at 80% 20%, rgba(255, 0, 228, 0.1) 0%, transparent 50%),
-    radial-gradient(circle at 40% 40%, rgba(124, 58, 237, 0.1) 0%, transparent 50%);
-  animation: cxBgShift 20s ease-in-out infinite;
+  overflow: hidden;
   pointer-events: none;
+  background: #0f172a;
 }
 
-@keyframes cxBgShift {
-  0%, 100% { transform: scale(1) rotate(0deg); }
-  50% { transform: scale(1.1) rotate(1deg); }
+.cx-aurora-layer {
+  position: absolute;
+  width: 200%;
+  height: 200%;
+  opacity: 0.12;
+  animation: cxAuroraFloat 20s ease-in-out infinite;
 }
 
+.cx-aurora-1 {
+  background: linear-gradient(45deg, transparent, #6366f1, transparent);
+  animation-delay: 0s;
+  transform: rotate(0deg);
+}
+
+.cx-aurora-2 {
+  background: linear-gradient(135deg, transparent, #8b5cf6, transparent);
+  animation-delay: -7s;
+  transform: rotate(120deg);
+}
+
+.cx-aurora-3 {
+  background: linear-gradient(225deg, transparent, #06b6d4, transparent);
+  animation-delay: -14s;
+  transform: rotate(240deg);
+}
+
+@keyframes cxAuroraFloat {
+  0%, 100% { transform: translateX(-50%) translateY(-50%) rotate(0deg) scale(1); }
+  33%  { transform: translateX(-40%) translateY(-60%) rotate(120deg) scale(1.1); }
+  66%  { transform: translateX(-60%) translateY(-40%) rotate(240deg) scale(0.9); }
+}
+
+/* Subtle grid overlay on top of aurora */
 .cx-cyber-grid {
   position: fixed;
   top: 0;
@@ -47,17 +74,11 @@ body {
   width: 100%;
   height: 100%;
   background:
-    linear-gradient(rgba(0, 240, 255, 0.02) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0, 240, 255, 0.02) 1px, transparent 1px);
+    linear-gradient(rgba(99, 102, 241, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(99, 102, 241, 0.03) 1px, transparent 1px);
   background-size: 50px 50px;
   z-index: 0;
-  animation: cxGridMove 30s linear infinite;
   pointer-events: none;
-}
-
-@keyframes cxGridMove {
-  0% { transform: translate(0, 0); }
-  100% { transform: translate(50px, 50px); }
 }
 
 .cx-particles {
