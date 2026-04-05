@@ -32,6 +32,8 @@ export interface SessionState {
 class BaileysSession extends EventEmitter {
   private sock: WASocket | null = null;
   public sessionDir: string;
+  // True once requestPairingCode() succeeds, reset when connection fully opens or clears
+  private pairingPending = false;
   public sessionState: SessionState = {
     connected: false,
     phone: null,
@@ -49,6 +51,16 @@ class BaileysSession extends EventEmitter {
     }
   }
 
+  private clearAuthDir() {
+    try {
+      fs.rmSync(this.sessionDir, { recursive: true, force: true });
+      fs.mkdirSync(this.sessionDir, { recursive: true });
+      logger.info("Cleared auth session for fresh pairing");
+    } catch (e) {
+      logger.error({ e }, "Failed to clear auth session");
+    }
+  }
+
   async start() {
     try {
       const { version } = await fetchLatestBaileysVersion();
@@ -57,6 +69,12 @@ class BaileysSession extends EventEmitter {
       const { state: authState, saveCreds } = await useMultiFileAuthState(
         this.sessionDir,
       );
+
+      // Only persist credentials once fully connected — not during pairing phase
+      let fullyConnected = false;
+      const guardedSaveCreds = async () => {
+        if (fullyConnected) await saveCreds();
+      };
 
       this.sock = makeWASocket({
         version,
@@ -70,7 +88,8 @@ class BaileysSession extends EventEmitter {
       this.sock.ev.on("connection.update", async (update: Partial<ConnectionState>) => {
         const { connection, lastDisconnect, qr } = update;
 
-        if (qr) {
+        // Only emit QR events if we haven't already issued a pairing code
+        if (qr && !this.pairingPending) {
           try {
             const qrDataUrl = await QRCode.toDataURL(qr, {
               errorCorrectionLevel: "M",
@@ -94,18 +113,16 @@ class BaileysSession extends EventEmitter {
         if (connection === "close") {
           const statusCode = (lastDisconnect?.error as Boom)?.output?.statusCode;
           const isLoggedOut = statusCode === DisconnectReason.loggedOut || statusCode === 401;
+          // QR timeout fires when no QR was scanned — clear if pairing code was pending
+          const isQrTimeout = statusCode === 408;
 
           logger.info({ statusCode, isLoggedOut }, "Connection closed");
 
-          // If logged out / credentials rejected, wipe the session so we can re-pair fresh
-          if (isLoggedOut) {
-            try {
-              fs.rmSync(this.sessionDir, { recursive: true, force: true });
-              fs.mkdirSync(this.sessionDir, { recursive: true });
-              logger.info("Cleared auth session for fresh pairing");
-            } catch (e) {
-              logger.error({ e }, "Failed to clear auth session");
-            }
+          if (isLoggedOut || (isQrTimeout && this.pairingPending)) {
+            // Stale / rejected credentials — wipe everything for a clean slate
+            this.pairingPending = false;
+            fullyConnected = false;
+            this.clearAuthDir();
           }
 
           this.sessionState = {
@@ -117,9 +134,13 @@ class BaileysSession extends EventEmitter {
           };
           this.emit("state-change", this.sessionState);
 
-          // Always reconnect — a fresh QR will be generated if credentials were cleared
           setTimeout(() => this.start(), 3000);
         } else if (connection === "open") {
+          fullyConnected = true;
+          this.pairingPending = false;
+          // Now safe to persist credentials
+          await saveCreds();
+
           const phone = this.sock?.user?.id?.split(":")[0] || null;
           this.sessionState = {
             ...this.sessionState,
@@ -141,7 +162,7 @@ class BaileysSession extends EventEmitter {
         }
       });
 
-      this.sock.ev.on("creds.update", saveCreds);
+      this.sock.ev.on("creds.update", guardedSaveCreds);
 
       logger.info("Baileys session started");
     } catch (err) {
@@ -169,6 +190,9 @@ class BaileysSession extends EventEmitter {
       const code = await this.sock.requestPairingCode(cleanPhone);
       const formattedCode = code?.match(/.{1,4}/g)?.join("-") || code;
 
+      // Mark pairing as pending so we know to wipe on next QR timeout
+      this.pairingPending = true;
+
       this.sessionState = {
         ...this.sessionState,
         state: "code_ready",
@@ -176,6 +200,7 @@ class BaileysSession extends EventEmitter {
       };
       this.emit("state-change", this.sessionState);
 
+      logger.info({ phone: cleanPhone }, "Pairing code sent to WhatsApp");
       return formattedCode;
     } catch (err) {
       logger.error({ err }, "Failed to request pairing code");
