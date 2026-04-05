@@ -242,39 +242,6 @@ body {
   transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
-.cx-container::before {
-  content: '';
-  position: absolute;
-  top: -2px;
-  left: -2px;
-  right: -2px;
-  bottom: -2px;
-  background: conic-gradient(
-    from 0deg,
-    transparent,
-    #00f0ff,
-    transparent,
-    #ff00e4,
-    transparent
-  );
-  border-radius: 26px;
-  z-index: -1;
-  animation: cxRotate 6s linear infinite;
-}
-
-.cx-container::after {
-  content: '';
-  position: absolute;
-  inset: 2px;
-  background: rgba(20, 20, 40, 0.95);
-  border-radius: 22px;
-  z-index: -1;
-}
-
-@keyframes cxRotate {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
 
 .cx-header {
   text-align: center;
