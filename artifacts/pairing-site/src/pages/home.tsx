@@ -1,19 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useGetPairingStatus, useRequestPairingCode, useGetServerStats } from '@workspace/api-client-react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { Copy, CheckCircle2, Loader2, ShieldCheck, RotateCcw } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form';
-
-const formSchema = z.object({
-  phoneNumber: z
-    .string()
-    .min(7, 'Too short — include country code')
-    .regex(/^\d+$/, 'Digits only, no spaces or +'),
-});
+import './home.css';
 
 function formatUptime(seconds: number): string {
   const h = Math.floor(seconds / 3600);
@@ -24,26 +11,35 @@ function formatUptime(seconds: number): string {
   return `${s}s`;
 }
 
-function StatCard({ label, value, accent }: { label: string; value: string | number; accent?: string }) {
+function Particles() {
+  const particles = Array.from({ length: 30 }, (_, i) => ({
+    id: i,
+    left: `${Math.random() * 100}vw`,
+    delay: `${Math.random() * 20}s`,
+    duration: `${15 + Math.random() * 10}s`,
+  }));
+
   return (
-    <div className="flex flex-col items-center px-4 py-2 border-r border-primary/20 last:border-r-0">
-      <span className="text-[10px] font-mono tracking-widest text-primary/40 uppercase">{label}</span>
-      <span className={`text-sm font-mono font-bold ${accent || 'text-primary'}`}>{value}</span>
+    <div className="cx-particles">
+      {particles.map((p) => (
+        <div
+          key={p.id}
+          className="cx-particle"
+          style={{ left: p.left, animationDelay: p.delay, animationDuration: p.duration }}
+        />
+      ))}
     </div>
   );
 }
 
 export function Home() {
-  const [copied, setCopied] = useState(false);
+  const [phone, setPhone] = useState('');
+  const [phoneError, setPhoneError] = useState('');
   const [pairingCode, setPairingCode] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const { data: status } = useGetPairingStatus({ query: { refetchInterval: 4000 } });
   const { data: stats } = useGetServerStats({ query: { refetchInterval: 5000 } });
-
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: { phoneNumber: '' },
-  });
 
   const requestMutation = useRequestPairingCode({
     mutation: {
@@ -52,169 +48,196 @@ export function Home() {
     },
   });
 
-  const onSubmit = (values: z.infer<typeof formSchema>) => {
-    setPairingCode(null);
-    requestMutation.mutate({ data: { phoneNumber: values.phoneNumber } });
-  };
-
-  const handleCopy = () => {
-    if (pairingCode) {
-      navigator.clipboard.writeText(pairingCode);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2500);
-    }
-  };
-
   const isConnected = status?.connected || status?.state === 'connected';
 
-  if (isConnected) {
-    return (
-      <div className="min-h-[100dvh] flex flex-col items-center justify-center p-6 relative z-10 scanlines">
-        <div className="glass-panel p-12 max-w-lg w-full text-center space-y-8 rounded-lg animate-in slide-in-from-bottom-8 fade-in duration-1000">
-          <div className="mx-auto w-24 h-24 rounded-full bg-primary/20 flex items-center justify-center border border-primary neon-border animate-pulse">
-            <ShieldCheck className="w-12 h-12 text-primary" />
-          </div>
-          <div className="space-y-2">
-            <h1 className="text-4xl font-mono font-bold tracking-wider text-primary neon-text">LINK ESTABLISHED</h1>
-            <p className="text-muted-foreground font-mono">Bot Connected Successfully.</p>
-          </div>
-          <div className="font-mono text-sm text-primary/50 border-t border-primary/20 pt-6">
-            <p>SYSTEM.OVERRIDE: COMPLETE</p>
-            <p className="mt-1">AWAITING COMMANDS...</p>
-          </div>
-        </div>
-      </div>
-    );
+  function validatePhone(value: string): boolean {
+    if (!/^\d{7,15}$/.test(value)) {
+      setPhoneError('Invalid number format. Use country code + number, digits only.');
+      return false;
+    }
+    setPhoneError('');
+    return true;
   }
 
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!validatePhone(phone)) return;
+    setPairingCode(null);
+    requestMutation.mutate({ data: { phoneNumber: phone } });
+  }
+
+  function handleCopy() {
+    if (!pairingCode) return;
+    navigator.clipboard.writeText(pairingCode).catch(() => {
+      const ta = document.createElement('textarea');
+      ta.value = pairingCode;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+    });
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
+  function handleReset() {
+    setPairingCode(null);
+    setPhone('');
+    setPhoneError('');
+    requestMutation.reset();
+  }
+
+  const uptime = stats ? formatUptime(stats.uptimeSeconds) : 'Loading...';
+  const visitors = stats ? stats.visitors.toLocaleString() : '0';
+  const requests = stats ? stats.requests.toLocaleString() : '0';
+  const success = stats ? stats.success.toLocaleString() : '0';
+  const failed = stats ? stats.failed.toLocaleString() : '0';
+
   return (
-    <div className="min-h-[100dvh] flex flex-col relative z-10 scanlines">
+    <>
+      <div className="cx-bg-animation" />
+      <div className="cx-cyber-grid" />
+      <Particles />
 
-      {/* ── Stats Bar ── */}
-      <div className="w-full bg-black/80 border-b border-primary/20 backdrop-blur-md">
-        <div className="max-w-2xl mx-auto flex items-center justify-center flex-wrap">
-          <StatCard label="Status" value="Online" accent="text-green-400" />
-          <StatCard label="Uptime" value={stats ? formatUptime(stats.uptimeSeconds) : '—'} />
-          <StatCard label="Visitors" value={stats?.visitors ?? '—'} />
-          <StatCard label="Requests" value={stats?.requests?.toLocaleString() ?? '—'} />
-          <StatCard label="Success" value={stats?.success?.toLocaleString() ?? '—'} accent="text-green-400" />
-          <StatCard label="Failed" value={stats?.failed?.toLocaleString() ?? '—'} accent={stats?.failed ? 'text-red-400' : 'text-primary'} />
-        </div>
-      </div>
+      <div className="cx-main-container">
 
-      {/* ── Main Panel ── */}
-      <div className="flex-1 flex items-center justify-center p-4 md:p-8">
-        <div className="w-full max-w-md glass-panel rounded-xl overflow-hidden shadow-2xl">
-
-          {/* Terminal header */}
-          <div className="h-10 bg-black/80 border-b border-primary/30 flex items-center px-4 gap-2">
-            <div className="w-3 h-3 rounded-full bg-red-500/70" />
-            <div className="w-3 h-3 rounded-full bg-yellow-500/70" />
-            <div className="w-3 h-3 rounded-full bg-primary/80" />
-            <span className="ml-auto font-mono text-[10px] text-primary/40 tracking-widest">TRUTH-MD SESSION</span>
+        {/* ── Stats Panel ── */}
+        <div className="cx-stats-panel">
+          <div className="cx-stats-header">
+            <div className="cx-stats-icon">
+              <i className="fas fa-chart-line" />
+            </div>
+            <div className="cx-stats-title">Server Stats</div>
           </div>
 
-          <div className="p-8 space-y-8">
-            {/* Title */}
-            <div className="text-center space-y-2">
-              <h1 className="text-6xl font-mono font-bold tracking-tighter text-primary neon-text">
-                TRUTH-MD
-              </h1>
-              <p className="text-xs font-mono text-muted-foreground tracking-widest uppercase">
-                Enter your WhatsApp number with country code
-              </p>
+          <div className="cx-stat-item">
+            <div className="cx-stat-label">
+              <div className="cx-status-indicator" />
+              Status
             </div>
+            <div className="cx-stat-value">Online</div>
+          </div>
 
-            {/* Form */}
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="phoneNumber"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormControl>
-                        <Input
-                          placeholder="2547xxxxxxxx"
-                          className="font-mono text-center text-lg bg-black/60 border-primary/30 text-primary placeholder:text-primary/25 focus-visible:ring-primary focus-visible:border-primary h-12 tracking-widest"
-                          inputMode="numeric"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage className="text-red-400 font-mono text-xs text-center" />
-                    </FormItem>
+          <div className="cx-stat-item">
+            <div className="cx-stat-label">
+              <i className="fas fa-clock" />
+              Uptime
+            </div>
+            <div className="cx-stat-value">{uptime}</div>
+          </div>
+
+          <div className="cx-stat-item">
+            <div className="cx-stat-label">
+              <i className="fas fa-users" />
+              Visitors
+            </div>
+            <div className="cx-stat-value">{visitors}</div>
+          </div>
+
+          <div className="cx-stat-item">
+            <div className="cx-stat-label">
+              <i className="fas fa-server" />
+              Requests
+            </div>
+            <div className="cx-stat-value">{requests}</div>
+          </div>
+
+          <div className="cx-stat-item">
+            <div className="cx-stat-label">
+              <i className="fas fa-check-circle" />
+              Success
+            </div>
+            <div className="cx-stat-value" style={{ color: 'var(--success)' }}>{success}</div>
+          </div>
+
+          <div className="cx-stat-item">
+            <div className="cx-stat-label">
+              <i className="fas fa-times-circle" />
+              Failed
+            </div>
+            <div className="cx-stat-value" style={{ color: stats?.failed ? 'var(--error)' : 'var(--primary)' }}>{failed}</div>
+          </div>
+        </div>
+
+        {/* ── Main Pairing Card ── */}
+        <div className="cx-container">
+
+          {isConnected ? (
+            <div className="cx-connected">
+              <div className="cx-connected-icon">
+                <i className="fas fa-shield-alt" />
+              </div>
+              <div className="cx-connected-title">LINK ESTABLISHED</div>
+              <div className="cx-connected-sub">Bot connected successfully</div>
+            </div>
+          ) : (
+            <>
+              <div className="cx-header">
+                <h1 className="cx-title">TRUTH-MD</h1>
+                <p className="cx-subtitle">Enter your WhatsApp number with country code</p>
+              </div>
+
+              <form onSubmit={handleSubmit}>
+                <div className="cx-input-field">
+                  <input
+                    type="tel"
+                    inputMode="numeric"
+                    placeholder="2547xxxxxxxx"
+                    value={phone}
+                    onChange={(e) => {
+                      setPhone(e.target.value.replace(/\D/g, ''));
+                      if (phoneError) setPhoneError('');
+                    }}
+                    disabled={requestMutation.isPending}
+                    autoComplete="off"
+                  />
+                  {phoneError && <div className="cx-error">{phoneError}</div>}
+                  {requestMutation.isError && !phoneError && (
+                    <div className="cx-error">
+                      Failed to generate code. Ensure your number includes country code.
+                    </div>
                   )}
-                />
+                </div>
 
-                <Button
-                  type="submit"
-                  className="w-full h-12 font-mono text-sm tracking-widest bg-primary/20 text-primary border border-primary/60 hover:bg-primary hover:text-black transition-all neon-border"
-                  disabled={requestMutation.isPending}
-                >
-                  {requestMutation.isPending ? (
-                    <span className="flex items-center gap-2">
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      GENERATING CODE...
-                    </span>
-                  ) : (
-                    'Generate Pair Code'
-                  )}
-                </Button>
-
-                {requestMutation.isError && (
-                  <p className="text-red-400 text-xs font-mono text-center">
-                    Failed to generate code. Make sure number is correct with country code.
-                  </p>
+                {requestMutation.isPending ? (
+                  <div className="cx-loading">
+                    <div className="cx-spinner" />
+                    <div className="cx-loading-text">Generating Code...</div>
+                  </div>
+                ) : (
+                  <button type="submit" className="cx-btn" disabled={requestMutation.isPending}>
+                    Generate Pair Code
+                  </button>
                 )}
               </form>
-            </Form>
 
-            {/* Pairing Code display */}
-            {pairingCode && (
-              <div className="animate-in fade-in zoom-in-95 duration-500 space-y-4">
-                <div className="bg-black/70 border border-primary/40 rounded-lg p-6 text-center space-y-4">
-                  <p className="text-[10px] font-mono text-primary/50 tracking-widest uppercase">Pairing Code Generated</p>
-                  <div className="text-3xl md:text-4xl font-mono font-bold text-primary neon-text tracking-[0.15em]">
-                    {pairingCode}
-                  </div>
-                  <Button
+              {pairingCode && (
+                <div className="cx-result">
+                  <div className="cx-result-label">Pairing Code Generated</div>
+                  <div className="cx-code-display">{pairingCode}</div>
+                  <button
+                    className={`cx-copy-btn${copied ? ' copied' : ''}`}
                     onClick={handleCopy}
-                    variant="outline"
-                    size="sm"
-                    className="border-primary/50 text-primary hover:bg-primary hover:text-black font-mono text-xs tracking-widest transition-all"
                   >
                     {copied ? (
-                      <span className="flex items-center gap-2"><CheckCircle2 className="w-3 h-3" /> COPIED</span>
+                      <><i className="fas fa-check" style={{ marginRight: 8 }} />Copied!</>
                     ) : (
-                      <span className="flex items-center gap-2"><Copy className="w-3 h-3" /> Copy Code</span>
+                      <><i className="fas fa-copy" style={{ marginRight: 8 }} />Copy Code</>
                     )}
-                  </Button>
+                  </button>
+                  <div className="cx-instructions">
+                    WhatsApp → Linked Devices → Link a Device<br />
+                    → Link with phone number instead
+                  </div>
+                  <button className="cx-retry-btn" onClick={handleReset}>
+                    <i className="fas fa-redo" style={{ marginRight: 6 }} />Try again
+                  </button>
                 </div>
-
-                <div className="text-xs font-mono text-primary/40 space-y-1 text-center border-t border-primary/10 pt-4">
-                  <p>WhatsApp &gt; Linked Devices &gt; Link a Device</p>
-                  <p>&gt; Link with phone number instead</p>
-                </div>
-
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => { setPairingCode(null); form.reset(); requestMutation.reset(); }}
-                  className="w-full font-mono text-xs text-primary/30 hover:text-primary/70 gap-1"
-                >
-                  <RotateCcw className="w-3 h-3" /> Try again
-                </Button>
-              </div>
-            )}
-          </div>
-
-          <div className="bg-black/80 px-4 py-3 border-t border-primary/20 text-center">
-            <p className="font-mono text-[10px] text-primary/30 tracking-widest uppercase">
-              Powered by Baileys + TRUTH-MD
-            </p>
-          </div>
+              )}
+            </>
+          )}
         </div>
       </div>
-    </div>
+    </>
   );
 }
