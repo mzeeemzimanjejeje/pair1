@@ -470,6 +470,18 @@ body {
   color: white;
 }
 
+.cx-expired-banner {
+  font-size: 0.85rem;
+  color: #ff3860;
+  background: rgba(255, 56, 96, 0.1);
+  border: 1px solid rgba(255, 56, 96, 0.3);
+  border-radius: 10px;
+  padding: 12px 16px;
+  margin-bottom: 10px;
+  text-align: center;
+  line-height: 1.5;
+}
+
 .cx-countdown {
   font-size: 0.82rem;
   font-family: 'JetBrains Mono', monospace;

@@ -33,9 +33,6 @@ export interface SessionState {
 class BaileysSession extends EventEmitter {
   private sock: WASocket | null = null;
   public sessionDir: string;
-  // Phone number the user requested pairing for — kept across socket restarts
-  private pendingPhone: string | null = null;
-  private autoRenewTimer: NodeJS.Timeout | null = null;
 
   public sessionState: SessionState = {
     connected: false,
@@ -65,39 +62,6 @@ class BaileysSession extends EventEmitter {
     }
   }
 
-  private cancelAutoRenew() {
-    if (this.autoRenewTimer) {
-      clearTimeout(this.autoRenewTimer);
-      this.autoRenewTimer = null;
-    }
-  }
-
-  // Called automatically each time a fresh QR is available and pendingPhone is set
-  private scheduleAutoRenew(delayMs = 800) {
-    this.cancelAutoRenew();
-    if (!this.pendingPhone) return;
-    const phone = this.pendingPhone;
-    this.autoRenewTimer = setTimeout(async () => {
-      if (!this.sock || !this.pendingPhone) return;
-      try {
-        logger.info({ phone }, "Auto-renewing pairing code");
-        const code = await this.sock.requestPairingCode(phone);
-        const formattedCode = code?.match(/.{1,4}/g)?.join("-") || code;
-        this.sessionState = {
-          ...this.sessionState,
-          state: "code_ready",
-          pairingCode: formattedCode,
-          codeIssuedAt: Date.now(),
-          qr: null,
-        };
-        this.emit("state-change", this.sessionState);
-        logger.info({ phone, code: formattedCode }, "Pairing code renewed");
-      } catch (err) {
-        logger.error({ err }, "Auto-renew pairing code failed");
-      }
-    }, delayMs);
-  }
-
   async start() {
     try {
       const { version } = await fetchLatestBaileysVersion();
@@ -107,7 +71,7 @@ class BaileysSession extends EventEmitter {
         this.sessionDir,
       );
 
-      // Only persist credentials once fully connected — not during pairing phase
+      // Only persist credentials once the device is fully linked
       let fullyConnected = false;
       const guardedSaveCreds = async () => {
         if (fullyConnected) await saveCreds();
@@ -127,12 +91,8 @@ class BaileysSession extends EventEmitter {
 
         if (qr) {
           logger.info("QR code generated");
-
-          if (this.pendingPhone) {
-            // A user already requested a code — auto-renew immediately instead of showing QR
-            this.scheduleAutoRenew(800);
-          } else {
-            // No pending pairing — show the QR code
+          // Only show QR if no pairing code has been issued yet
+          if (!this.sessionState.pairingCode) {
             try {
               const qrDataUrl = await QRCode.toDataURL(qr, {
                 errorCorrectionLevel: "M",
@@ -145,8 +105,6 @@ class BaileysSession extends EventEmitter {
                 qrExpiry: Date.now() + 60000,
                 state: "qr_ready",
                 connected: false,
-                pairingCode: null,
-                codeIssuedAt: null,
               };
               this.emit("state-change", this.sessionState);
             } catch (err) {
@@ -156,15 +114,13 @@ class BaileysSession extends EventEmitter {
         }
 
         if (connection === "close") {
-          this.cancelAutoRenew();
           const statusCode = (lastDisconnect?.error as Boom)?.output?.statusCode;
           const isLoggedOut = statusCode === DisconnectReason.loggedOut || statusCode === 401;
           const isQrTimeout = statusCode === 408;
 
           logger.info({ statusCode, isLoggedOut }, "Connection closed");
 
-          // Always wipe on 401 (invalid creds). On 408 only wipe if no pending phone
-          // (if pendingPhone is set, we want to restart fresh and auto-renew the code)
+          // Wipe stale credentials on logout or QR timeout
           if (isLoggedOut || isQrTimeout) {
             fullyConnected = false;
             this.clearAuthDir();
@@ -175,14 +131,14 @@ class BaileysSession extends EventEmitter {
             connected: false,
             state: "connecting",
             qr: null,
+            pairingCode: null,
+            codeIssuedAt: null,
           };
           this.emit("state-change", this.sessionState);
 
           setTimeout(() => this.start(), 3000);
         } else if (connection === "open") {
-          this.cancelAutoRenew();
           fullyConnected = true;
-          this.pendingPhone = null;
           await saveCreds();
 
           const phone = this.sock?.user?.id?.split(":")[0] || null;
@@ -196,7 +152,7 @@ class BaileysSession extends EventEmitter {
             pairingCode: null,
             codeIssuedAt: null,
           };
-          logger.info({ phone }, "WhatsApp connection opened — device linked!");
+          logger.info({ phone }, "WhatsApp device linked successfully!");
           this.emit("state-change", this.sessionState);
         } else if (connection === "connecting") {
           this.sessionState = {
@@ -223,7 +179,7 @@ class BaileysSession extends EventEmitter {
 
   async requestPairingCode(phoneNumber: string): Promise<string> {
     if (!this.sock) {
-      throw new Error("Socket not initialized. Please wait for connection to start.");
+      throw new Error("Socket not initialized. Please wait for connection.");
     }
 
     const cleanPhone = phoneNumber.replace(/\D/g, "");
@@ -231,33 +187,24 @@ class BaileysSession extends EventEmitter {
       throw new Error("Invalid phone number");
     }
 
-    try {
-      const code = await this.sock.requestPairingCode(cleanPhone);
-      const formattedCode = code?.match(/.{1,4}/g)?.join("-") || code;
+    const code = await this.sock.requestPairingCode(cleanPhone);
+    const formattedCode = code?.match(/.{1,4}/g)?.join("-") || code;
 
-      // Store the phone so the code auto-renews on every socket restart
-      this.pendingPhone = cleanPhone;
+    this.sessionState = {
+      ...this.sessionState,
+      state: "code_ready",
+      pairingCode: formattedCode,
+      codeIssuedAt: Date.now(),
+      qr: null,
+    };
+    this.emit("state-change", this.sessionState);
 
-      this.sessionState = {
-        ...this.sessionState,
-        state: "code_ready",
-        pairingCode: formattedCode,
-        codeIssuedAt: Date.now(),
-        qr: null,
-      };
-      this.emit("state-change", this.sessionState);
-
-      logger.info({ phone: cleanPhone, code: formattedCode }, "Pairing code issued");
-      return formattedCode;
-    } catch (err) {
-      logger.error({ err }, "Failed to request pairing code");
-      throw err;
-    }
+    logger.info({ phone: cleanPhone, code: formattedCode }, "Pairing code issued");
+    return formattedCode;
   }
 
   clearPendingPhone() {
-    this.pendingPhone = null;
-    this.cancelAutoRenew();
+    // No-op kept for route compatibility
   }
 
   getState(): SessionState {

@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useGetPairingStatus, useRequestPairingCode, useGetServerStats } from '@workspace/api-client-react';
 import './home.css';
 
-const CODE_TTL_MS = 110_000; // codes live ~110s (socket QR cycle ~2min, renews early)
+const CODE_TTL_SECONDS = 60;
 
 function formatUptime(seconds: number): string {
   const h = Math.floor(seconds / 3600);
@@ -20,7 +20,6 @@ function Particles() {
     delay: `${Math.random() * 20}s`,
     duration: `${15 + Math.random() * 10}s`,
   }));
-
   return (
     <div className="cx-particles">
       {particles.map((p) => (
@@ -38,19 +37,16 @@ export function Home() {
   const [phone, setPhone] = useState('');
   const [phoneError, setPhoneError] = useState('');
   const [pairingCode, setPairingCode] = useState<string | null>(null);
-  const [codeIssuedAt, setCodeIssuedAt] = useState<number | null>(null);
   const [copied, setCopied] = useState(false);
   const [liveUptime, setLiveUptime] = useState(0);
   const [countdown, setCountdown] = useState<number | null>(null);
+  const [codeExpired, setCodeExpired] = useState(false);
 
-  const { data: status } = useGetPairingStatus({ query: { refetchInterval: 3000 } });
+  const { data: status } = useGetPairingStatus({ query: { refetchInterval: 4000 } });
   const { data: stats } = useGetServerStats({ query: { refetchInterval: 5000 } });
 
-  // Sync uptime from server, then tick every second locally
   useEffect(() => {
-    if (stats?.uptimeSeconds !== undefined) {
-      setLiveUptime(stats.uptimeSeconds);
-    }
+    if (stats?.uptimeSeconds !== undefined) setLiveUptime(stats.uptimeSeconds);
   }, [stats?.uptimeSeconds]);
 
   useEffect(() => {
@@ -58,40 +54,23 @@ export function Home() {
     return () => clearInterval(id);
   }, []);
 
-  // Auto-sync code from status polling — picks up auto-renewals
+  // Countdown ticker — runs from CODE_TTL_SECONDS down to 0
   useEffect(() => {
-    if (status?.pairingCode && status.pairingCode !== pairingCode) {
-      setPairingCode(status.pairingCode);
-      setCodeIssuedAt(status.codeIssuedAt ?? Date.now());
-    }
-    // If server cleared the code (e.g. connected), clear local state too
-    if (!status?.pairingCode && status?.connected) {
-      setPairingCode(null);
-      setCodeIssuedAt(null);
-    }
-  }, [status?.pairingCode, status?.codeIssuedAt, status?.connected]);
-
-  // Countdown ticker based on codeIssuedAt
-  useEffect(() => {
-    if (!codeIssuedAt) {
-      setCountdown(null);
+    if (countdown === null) return;
+    if (countdown <= 0) {
+      setCodeExpired(true);
       return;
     }
-    const tick = () => {
-      const elapsed = Date.now() - codeIssuedAt;
-      const remaining = Math.max(0, Math.ceil((CODE_TTL_MS - elapsed) / 1000));
-      setCountdown(remaining);
-    };
-    tick();
-    const id = setInterval(tick, 1000);
-    return () => clearInterval(id);
-  }, [codeIssuedAt]);
+    const id = setTimeout(() => setCountdown((c) => (c !== null ? c - 1 : null)), 1000);
+    return () => clearTimeout(id);
+  }, [countdown]);
 
   const requestMutation = useRequestPairingCode({
     mutation: {
       onSuccess: (data) => {
         setPairingCode(data.code);
-        setCodeIssuedAt(Date.now());
+        setCountdown(CODE_TTL_SECONDS);
+        setCodeExpired(false);
       },
       onError: () => {},
     },
@@ -101,7 +80,7 @@ export function Home() {
 
   function validatePhone(value: string): boolean {
     if (!/^\d{7,15}$/.test(value)) {
-      setPhoneError('Invalid number format. Use country code + number, digits only.');
+      setPhoneError('Invalid number — use country code + number, digits only.');
       return false;
     }
     setPhoneError('');
@@ -112,7 +91,8 @@ export function Home() {
     e.preventDefault();
     if (!validatePhone(phone)) return;
     setPairingCode(null);
-    setCodeIssuedAt(null);
+    setCountdown(null);
+    setCodeExpired(false);
     requestMutation.mutate({ data: { phoneNumber: phone } });
   }
 
@@ -132,8 +112,8 @@ export function Home() {
 
   function handleReset() {
     setPairingCode(null);
-    setCodeIssuedAt(null);
     setCountdown(null);
+    setCodeExpired(false);
     setPhone('');
     setPhoneError('');
     requestMutation.reset();
@@ -146,12 +126,11 @@ export function Home() {
   const failed = stats ? stats.failed.toLocaleString() : '0';
 
   const countdownColor = countdown !== null
-    ? countdown > 60 ? '#2ecc71' : countdown > 30 ? '#f39c12' : '#ff3860'
-    : undefined;
+    ? countdown > 30 ? '#2ecc71' : countdown > 10 ? '#f39c12' : '#ff3860'
+    : '#2ecc71';
 
   return (
     <>
-      {/* CypherX.space aurora background */}
       <div className="cx-bg-animation">
         <div className="cx-aurora-layer cx-aurora-1" />
         <div className="cx-aurora-layer cx-aurora-2" />
@@ -165,69 +144,40 @@ export function Home() {
         {/* ── Stats Panel ── */}
         <div className="cx-stats-panel">
           <div className="cx-stats-header">
-            <div className="cx-stats-icon">
-              <i className="fas fa-chart-line" />
-            </div>
+            <div className="cx-stats-icon"><i className="fas fa-chart-line" /></div>
             <div className="cx-stats-title">Server Stats</div>
           </div>
-
           <div className="cx-stat-item">
-            <div className="cx-stat-label">
-              <div className="cx-status-indicator" />
-              Status
-            </div>
+            <div className="cx-stat-label"><div className="cx-status-indicator" />Status</div>
             <div className="cx-stat-value">Online</div>
           </div>
-
           <div className="cx-stat-item">
-            <div className="cx-stat-label">
-              <i className="fas fa-clock" />
-              Uptime
-            </div>
+            <div className="cx-stat-label"><i className="fas fa-clock" />Uptime</div>
             <div className="cx-stat-value">{uptime}</div>
           </div>
-
           <div className="cx-stat-item">
-            <div className="cx-stat-label">
-              <i className="fas fa-users" />
-              Visitors
-            </div>
+            <div className="cx-stat-label"><i className="fas fa-users" />Visitors</div>
             <div className="cx-stat-value">{visitors}</div>
           </div>
-
           <div className="cx-stat-item">
-            <div className="cx-stat-label">
-              <i className="fas fa-server" />
-              Requests
-            </div>
+            <div className="cx-stat-label"><i className="fas fa-server" />Requests</div>
             <div className="cx-stat-value">{requests}</div>
           </div>
-
           <div className="cx-stat-item">
-            <div className="cx-stat-label">
-              <i className="fas fa-check-circle" />
-              Success
-            </div>
+            <div className="cx-stat-label"><i className="fas fa-check-circle" />Success</div>
             <div className="cx-stat-value" style={{ color: 'var(--success)' }}>{success}</div>
           </div>
-
           <div className="cx-stat-item">
-            <div className="cx-stat-label">
-              <i className="fas fa-times-circle" />
-              Failed
-            </div>
+            <div className="cx-stat-label"><i className="fas fa-times-circle" />Failed</div>
             <div className="cx-stat-value" style={{ color: stats?.failed ? 'var(--error)' : 'var(--primary)' }}>{failed}</div>
           </div>
         </div>
 
         {/* ── Main Pairing Card ── */}
         <div className="cx-container">
-
           {isConnected ? (
             <div className="cx-connected">
-              <div className="cx-connected-icon">
-                <i className="fas fa-shield-alt" />
-              </div>
+              <div className="cx-connected-icon"><i className="fas fa-shield-alt" /></div>
               <div className="cx-connected-title">LINK ESTABLISHED</div>
               <div className="cx-connected-sub">Bot connected successfully</div>
             </div>
@@ -235,7 +185,7 @@ export function Home() {
             <>
               <div className="cx-header">
                 <h1 className="cx-title">TRUTH-MD</h1>
-                <p className="cx-subtitle">Link your WhatsApp — enter your number below to get a pairing code</p>
+                <p className="cx-subtitle">Link your WhatsApp — enter your number to get a pairing code</p>
               </div>
 
               <form onSubmit={handleSubmit}>
@@ -254,9 +204,7 @@ export function Home() {
                   />
                   {phoneError && <div className="cx-error">{phoneError}</div>}
                   {requestMutation.isError && !phoneError && (
-                    <div className="cx-error">
-                      Failed to generate code. Ensure your number includes country code.
-                    </div>
+                    <div className="cx-error">Failed to generate code. Please try again.</div>
                   )}
                 </div>
 
@@ -267,39 +215,45 @@ export function Home() {
                   </div>
                 ) : (
                   <button type="submit" className="cx-btn" disabled={requestMutation.isPending}>
-                    Generate Pair Code
+                    {pairingCode ? 'Generate New Code' : 'Generate Pair Code'}
                   </button>
                 )}
               </form>
 
               {pairingCode && (
                 <div className="cx-result">
-                  <div className="cx-result-label">Your Pairing Code</div>
-                  <div className="cx-code-display">{pairingCode}</div>
-
-                  {countdown !== null && (
-                    <div className="cx-countdown" style={{ color: countdownColor }}>
-                      <i className="fas fa-clock" style={{ marginRight: 6 }} />
-                      Refreshes in <strong>{countdown}s</strong> — enter it in WhatsApp now
+                  {codeExpired ? (
+                    <div className="cx-expired-banner">
+                      <i className="fas fa-exclamation-triangle" style={{ marginRight: 8 }} />
+                      Code expired — enter your number again and click Generate New Code
                     </div>
+                  ) : (
+                    <>
+                      <div className="cx-result-label">Your Pairing Code</div>
+                      <div className="cx-code-display">{pairingCode}</div>
+
+                      {countdown !== null && (
+                        <div className="cx-countdown" style={{ color: countdownColor }}>
+                          <i className="fas fa-clock" style={{ marginRight: 6 }} />
+                          Valid for <strong>{countdown}s</strong> — enter this in WhatsApp now
+                        </div>
+                      )}
+
+                      <button className={`cx-copy-btn${copied ? ' copied' : ''}`} onClick={handleCopy}>
+                        {copied
+                          ? <><i className="fas fa-check" style={{ marginRight: 8 }} />Copied!</>
+                          : <><i className="fas fa-copy" style={{ marginRight: 8 }} />Copy Code</>}
+                      </button>
+
+                      <div className="cx-instructions">
+                        <div className="cx-step"><span className="cx-step-num">1</span>Open <b>WhatsApp</b> on your phone</div>
+                        <div className="cx-step"><span className="cx-step-num">2</span>Tap ⋮ → <b>Linked Devices</b> → <b>Link a Device</b></div>
+                        <div className="cx-step"><span className="cx-step-num">3</span>Tap <b>"Link with phone number instead"</b></div>
+                        <div className="cx-step"><span className="cx-step-num">4</span>Enter the code shown above</div>
+                      </div>
+                    </>
                   )}
 
-                  <button
-                    className={`cx-copy-btn${copied ? ' copied' : ''}`}
-                    onClick={handleCopy}
-                  >
-                    {copied ? (
-                      <><i className="fas fa-check" style={{ marginRight: 8 }} />Copied!</>
-                    ) : (
-                      <><i className="fas fa-copy" style={{ marginRight: 8 }} />Copy Code</>
-                    )}
-                  </button>
-                  <div className="cx-instructions">
-                    <div className="cx-step"><span className="cx-step-num">1</span>Open <b>WhatsApp</b> on your phone</div>
-                    <div className="cx-step"><span className="cx-step-num">2</span>Tap ⋮ → <b>Linked Devices</b> → <b>Link a Device</b></div>
-                    <div className="cx-step"><span className="cx-step-num">3</span>Tap <b>"Link with phone number instead"</b></div>
-                    <div className="cx-step"><span className="cx-step-num">4</span>Enter the code shown above</div>
-                  </div>
                   <button className="cx-retry-btn" onClick={handleReset}>
                     <i className="fas fa-redo" style={{ marginRight: 6 }} />Try again
                   </button>
