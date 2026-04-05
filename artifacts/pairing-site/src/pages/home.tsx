@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useGetPairingStatus, useRequestPairingCode, useGetServerStats } from '@workspace/api-client-react';
 import './home.css';
 
+const CODE_TTL_MS = 110_000; // codes live ~110s (socket QR cycle ~2min, renews early)
+
 function formatUptime(seconds: number): string {
   const h = Math.floor(seconds / 3600);
   const m = Math.floor((seconds % 3600) / 60);
@@ -36,13 +38,15 @@ export function Home() {
   const [phone, setPhone] = useState('');
   const [phoneError, setPhoneError] = useState('');
   const [pairingCode, setPairingCode] = useState<string | null>(null);
+  const [codeIssuedAt, setCodeIssuedAt] = useState<number | null>(null);
   const [copied, setCopied] = useState(false);
   const [liveUptime, setLiveUptime] = useState(0);
+  const [countdown, setCountdown] = useState<number | null>(null);
 
-  const { data: status } = useGetPairingStatus({ query: { refetchInterval: 4000 } });
+  const { data: status } = useGetPairingStatus({ query: { refetchInterval: 3000 } });
   const { data: stats } = useGetServerStats({ query: { refetchInterval: 5000 } });
 
-  // Sync from server on every API refresh, then tick every second locally
+  // Sync uptime from server, then tick every second locally
   useEffect(() => {
     if (stats?.uptimeSeconds !== undefined) {
       setLiveUptime(stats.uptimeSeconds);
@@ -54,9 +58,41 @@ export function Home() {
     return () => clearInterval(id);
   }, []);
 
+  // Auto-sync code from status polling — picks up auto-renewals
+  useEffect(() => {
+    if (status?.pairingCode && status.pairingCode !== pairingCode) {
+      setPairingCode(status.pairingCode);
+      setCodeIssuedAt(status.codeIssuedAt ?? Date.now());
+    }
+    // If server cleared the code (e.g. connected), clear local state too
+    if (!status?.pairingCode && status?.connected) {
+      setPairingCode(null);
+      setCodeIssuedAt(null);
+    }
+  }, [status?.pairingCode, status?.codeIssuedAt, status?.connected]);
+
+  // Countdown ticker based on codeIssuedAt
+  useEffect(() => {
+    if (!codeIssuedAt) {
+      setCountdown(null);
+      return;
+    }
+    const tick = () => {
+      const elapsed = Date.now() - codeIssuedAt;
+      const remaining = Math.max(0, Math.ceil((CODE_TTL_MS - elapsed) / 1000));
+      setCountdown(remaining);
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [codeIssuedAt]);
+
   const requestMutation = useRequestPairingCode({
     mutation: {
-      onSuccess: (data) => setPairingCode(data.code),
+      onSuccess: (data) => {
+        setPairingCode(data.code);
+        setCodeIssuedAt(Date.now());
+      },
       onError: () => {},
     },
   });
@@ -76,6 +112,7 @@ export function Home() {
     e.preventDefault();
     if (!validatePhone(phone)) return;
     setPairingCode(null);
+    setCodeIssuedAt(null);
     requestMutation.mutate({ data: { phoneNumber: phone } });
   }
 
@@ -95,6 +132,8 @@ export function Home() {
 
   function handleReset() {
     setPairingCode(null);
+    setCodeIssuedAt(null);
+    setCountdown(null);
     setPhone('');
     setPhoneError('');
     requestMutation.reset();
@@ -105,6 +144,10 @@ export function Home() {
   const requests = stats ? stats.requests.toLocaleString() : '0';
   const success = stats ? stats.success.toLocaleString() : '0';
   const failed = stats ? stats.failed.toLocaleString() : '0';
+
+  const countdownColor = countdown !== null
+    ? countdown > 60 ? '#2ecc71' : countdown > 30 ? '#f39c12' : '#ff3860'
+    : undefined;
 
   return (
     <>
@@ -233,6 +276,14 @@ export function Home() {
                 <div className="cx-result">
                   <div className="cx-result-label">Your Pairing Code</div>
                   <div className="cx-code-display">{pairingCode}</div>
+
+                  {countdown !== null && (
+                    <div className="cx-countdown" style={{ color: countdownColor }}>
+                      <i className="fas fa-clock" style={{ marginRight: 6 }} />
+                      Refreshes in <strong>{countdown}s</strong> — enter it in WhatsApp now
+                    </div>
+                  )}
+
                   <button
                     className={`cx-copy-btn${copied ? ' copied' : ''}`}
                     onClick={handleCopy}

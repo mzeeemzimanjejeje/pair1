@@ -94,6 +94,8 @@ router.get("/status", async (req: Request, res: Response) => {
       connected: state.connected,
       phone: state.phone,
       state: state.state,
+      pairingCode: state.pairingCode ?? null,
+      codeIssuedAt: state.codeIssuedAt ?? null,
     });
   } catch (err) {
     req.log.error({ err }, "Failed to get pairing status");
@@ -115,6 +117,9 @@ router.post("/reset", async (req: Request, res: Response) => {
         message: "Cannot reset an active connected session",
       });
     }
+
+    // Clear pending phone and auto-renew
+    session.clearPendingPhone();
 
     // Clear auth and restart
     const sessionDir = (session as any).sessionDir as string;

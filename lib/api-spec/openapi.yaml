@@ -154,6 +154,14 @@ components:
         state:
           type: string
           enum: [connecting, connected, disconnected, qr_ready, code_ready]
+        pairingCode:
+          type: string
+          nullable: true
+          description: Current pairing code if one has been issued
+        codeIssuedAt:
+          type: number
+          nullable: true
+          description: Unix timestamp (ms) when the current code was issued
       required:
         - connected
         - state

@@ -27,13 +27,16 @@ export interface SessionState {
   qr: string | null;
   qrExpiry: number | null;
   pairingCode: string | null;
+  codeIssuedAt: number | null;
 }
 
 class BaileysSession extends EventEmitter {
   private sock: WASocket | null = null;
   public sessionDir: string;
-  // True once requestPairingCode() succeeds, reset when connection fully opens or clears
-  private pairingPending = false;
+  // Phone number the user requested pairing for — kept across socket restarts
+  private pendingPhone: string | null = null;
+  private autoRenewTimer: NodeJS.Timeout | null = null;
+
   public sessionState: SessionState = {
     connected: false,
     phone: null,
@@ -41,6 +44,7 @@ class BaileysSession extends EventEmitter {
     qr: null,
     qrExpiry: null,
     pairingCode: null,
+    codeIssuedAt: null,
   };
 
   constructor() {
@@ -59,6 +63,39 @@ class BaileysSession extends EventEmitter {
     } catch (e) {
       logger.error({ e }, "Failed to clear auth session");
     }
+  }
+
+  private cancelAutoRenew() {
+    if (this.autoRenewTimer) {
+      clearTimeout(this.autoRenewTimer);
+      this.autoRenewTimer = null;
+    }
+  }
+
+  // Called automatically each time a fresh QR is available and pendingPhone is set
+  private scheduleAutoRenew(delayMs = 800) {
+    this.cancelAutoRenew();
+    if (!this.pendingPhone) return;
+    const phone = this.pendingPhone;
+    this.autoRenewTimer = setTimeout(async () => {
+      if (!this.sock || !this.pendingPhone) return;
+      try {
+        logger.info({ phone }, "Auto-renewing pairing code");
+        const code = await this.sock.requestPairingCode(phone);
+        const formattedCode = code?.match(/.{1,4}/g)?.join("-") || code;
+        this.sessionState = {
+          ...this.sessionState,
+          state: "code_ready",
+          pairingCode: formattedCode,
+          codeIssuedAt: Date.now(),
+          qr: null,
+        };
+        this.emit("state-change", this.sessionState);
+        logger.info({ phone, code: formattedCode }, "Pairing code renewed");
+      } catch (err) {
+        logger.error({ err }, "Auto-renew pairing code failed");
+      }
+    }, delayMs);
   }
 
   async start() {
@@ -88,39 +125,47 @@ class BaileysSession extends EventEmitter {
       this.sock.ev.on("connection.update", async (update: Partial<ConnectionState>) => {
         const { connection, lastDisconnect, qr } = update;
 
-        // Only emit QR events if we haven't already issued a pairing code
-        if (qr && !this.pairingPending) {
-          try {
-            const qrDataUrl = await QRCode.toDataURL(qr, {
-              errorCorrectionLevel: "M",
-              margin: 2,
-              color: { dark: "#00FF41", light: "#0D0D0D" },
-            });
-            this.sessionState = {
-              ...this.sessionState,
-              qr: qrDataUrl,
-              qrExpiry: Date.now() + 60000,
-              state: "qr_ready",
-              connected: false,
-            };
-            logger.info("QR code generated");
-            this.emit("state-change", this.sessionState);
-          } catch (err) {
-            logger.error({ err }, "Failed to generate QR code");
+        if (qr) {
+          logger.info("QR code generated");
+
+          if (this.pendingPhone) {
+            // A user already requested a code — auto-renew immediately instead of showing QR
+            this.scheduleAutoRenew(800);
+          } else {
+            // No pending pairing — show the QR code
+            try {
+              const qrDataUrl = await QRCode.toDataURL(qr, {
+                errorCorrectionLevel: "M",
+                margin: 2,
+                color: { dark: "#00FF41", light: "#0D0D0D" },
+              });
+              this.sessionState = {
+                ...this.sessionState,
+                qr: qrDataUrl,
+                qrExpiry: Date.now() + 60000,
+                state: "qr_ready",
+                connected: false,
+                pairingCode: null,
+                codeIssuedAt: null,
+              };
+              this.emit("state-change", this.sessionState);
+            } catch (err) {
+              logger.error({ err }, "Failed to generate QR code");
+            }
           }
         }
 
         if (connection === "close") {
+          this.cancelAutoRenew();
           const statusCode = (lastDisconnect?.error as Boom)?.output?.statusCode;
           const isLoggedOut = statusCode === DisconnectReason.loggedOut || statusCode === 401;
-          // QR timeout fires when no QR was scanned — clear if pairing code was pending
           const isQrTimeout = statusCode === 408;
 
           logger.info({ statusCode, isLoggedOut }, "Connection closed");
 
-          if (isLoggedOut || (isQrTimeout && this.pairingPending)) {
-            // Stale / rejected credentials — wipe everything for a clean slate
-            this.pairingPending = false;
+          // Always wipe on 401 (invalid creds). On 408 only wipe if no pending phone
+          // (if pendingPhone is set, we want to restart fresh and auto-renew the code)
+          if (isLoggedOut || isQrTimeout) {
             fullyConnected = false;
             this.clearAuthDir();
           }
@@ -130,15 +175,14 @@ class BaileysSession extends EventEmitter {
             connected: false,
             state: "connecting",
             qr: null,
-            pairingCode: null,
           };
           this.emit("state-change", this.sessionState);
 
           setTimeout(() => this.start(), 3000);
         } else if (connection === "open") {
+          this.cancelAutoRenew();
           fullyConnected = true;
-          this.pairingPending = false;
-          // Now safe to persist credentials
+          this.pendingPhone = null;
           await saveCreds();
 
           const phone = this.sock?.user?.id?.split(":")[0] || null;
@@ -150,8 +194,9 @@ class BaileysSession extends EventEmitter {
             qr: null,
             qrExpiry: null,
             pairingCode: null,
+            codeIssuedAt: null,
           };
-          logger.info({ phone }, "WhatsApp connection opened");
+          logger.info({ phone }, "WhatsApp connection opened — device linked!");
           this.emit("state-change", this.sessionState);
         } else if (connection === "connecting") {
           this.sessionState = {
@@ -190,22 +235,29 @@ class BaileysSession extends EventEmitter {
       const code = await this.sock.requestPairingCode(cleanPhone);
       const formattedCode = code?.match(/.{1,4}/g)?.join("-") || code;
 
-      // Mark pairing as pending so we know to wipe on next QR timeout
-      this.pairingPending = true;
+      // Store the phone so the code auto-renews on every socket restart
+      this.pendingPhone = cleanPhone;
 
       this.sessionState = {
         ...this.sessionState,
         state: "code_ready",
         pairingCode: formattedCode,
+        codeIssuedAt: Date.now(),
+        qr: null,
       };
       this.emit("state-change", this.sessionState);
 
-      logger.info({ phone: cleanPhone }, "Pairing code sent to WhatsApp");
+      logger.info({ phone: cleanPhone, code: formattedCode }, "Pairing code issued");
       return formattedCode;
     } catch (err) {
       logger.error({ err }, "Failed to request pairing code");
       throw err;
     }
+  }
+
+  clearPendingPhone() {
+    this.pendingPhone = null;
+    this.cancelAutoRenew();
   }
 
   getState(): SessionState {

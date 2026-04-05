@@ -470,6 +470,17 @@ body {
   color: white;
 }
 
+.cx-countdown {
+  font-size: 0.82rem;
+  font-family: 'JetBrains Mono', monospace;
+  margin: 10px 0 6px;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: color 0.5s;
+}
+
 .cx-instructions {
   margin-top: 15px;
   font-size: 0.8rem;
