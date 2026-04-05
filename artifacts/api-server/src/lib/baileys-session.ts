@@ -63,7 +63,7 @@ class BaileysSession extends EventEmitter {
         auth: authState,
         printQRInTerminal: false,
         logger: logger.child({ level: "silent" }) as any,
-        browser: ["TRUTH-MD", "Chrome", "1.0.0"],
+        browser: ["TRUTH-MD:~", "Chrome", "1.0.0"],
         generateHighQualityLinkPreview: false,
       });
 
