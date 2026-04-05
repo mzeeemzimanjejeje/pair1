@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface HealthStatus {
-  status: string;
+export interface PairingCodeRequest {
+  /** Phone number with country code (e.g. 1234567890) */
+  phoneNumber: string;
 }

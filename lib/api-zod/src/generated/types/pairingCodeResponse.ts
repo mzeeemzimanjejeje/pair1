@@ -6,6 +6,8 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface HealthStatus {
-  status: string;
+export interface PairingCodeResponse {
+  /** 8-digit pairing code formatted as XXXX-XXXX */
+  code: string;
+  phoneNumber: string;
 }
