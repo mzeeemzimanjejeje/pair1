@@ -37,20 +37,8 @@ export interface SessionState {
   sessionId: string | null;
 }
 
-// ─── Rate limiter (30 s between requests per phone) ──────────────────────────
-
-const CODE_COOLDOWN_MS = 30_000;
-const lastCodeRequest = new Map<string, number>();
-
-export function checkRateLimit(phone: string): { ok: boolean; retryInMs: number } {
-  const last = lastCodeRequest.get(phone) ?? 0;
-  const elapsed = Date.now() - last;
-  if (elapsed < CODE_COOLDOWN_MS) return { ok: false, retryInMs: CODE_COOLDOWN_MS - elapsed };
+export function checkRateLimit(_phone: string): { ok: boolean; retryInMs: number } {
   return { ok: true, retryInMs: 0 };
-}
-
-function recordCodeRequest(phone: string) {
-  lastCodeRequest.set(phone, Date.now());
 }
 
 // ─── Helper: remove directory ─────────────────────────────────────────────────
@@ -222,8 +210,6 @@ class BaileysSession extends EventEmitter {
 
               const raw = await sock.requestPairingCode(cleanPhone);
               const code = raw?.replace(/-/g, "").match(/.{1,4}/g)?.join("-") ?? raw;
-
-              recordCodeRequest(cleanPhone);
 
               this.setState({
                 state: "code_ready",
