@@ -211,11 +211,10 @@ class BaileysSession extends EventEmitter {
         sock.ev.on("connection.update", async (update: Partial<ConnectionState>) => {
           const { connection, lastDisconnect, qr } = update;
 
-          // Each QR cycle (~20s), WhatsApp rotates the valid code window.
-          // We must call requestPairingCode on every cycle so the code stays fresh.
-          // The Promise resolves only once (first code); subsequent cycles just
-          // update the shared state so the frontend can display the current code.
-          if (qr && !sock.authState.creds.registered) {
+          // Request the pairing code ONCE — on the very first QR event only.
+          // Calling requestPairingCode again on later QR cycles invalidates the
+          // in-progress registration session with WhatsApp, preventing connection.
+          if (qr && !sock.authState.creds.registered && !finished) {
             try {
               await delay(1500); // give WA server time to settle (mirrors reference impl)
 
@@ -230,11 +229,12 @@ class BaileysSession extends EventEmitter {
               });
 
               logger.info({ phone: cleanPhone, code }, "Pairing code issued");
-              if (!finished) { finished = true; resolve(code); }
+              finished = true;
+              resolve(code);
             } catch (e: unknown) {
               const msg = e instanceof Error ? e.message : "Code request failed";
               logger.error({ e }, "Failed to request pairing code");
-              if (!finished) finish(new Error(msg));
+              finish(new Error(msg));
             }
           }
 

@@ -2,9 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useGetPairingStatus, useRequestPairingCode, useGetServerStats } from '@workspace/api-client-react';
 import './home.css';
 
-// WhatsApp rotates the valid code window every ~20 s (one QR cycle).
-// The server issues a fresh code each cycle; the frontend follows suit.
-const CODE_TTL_SECONDS = 20;
+// One pairing code is valid for roughly 60 s (one QR registration window).
+const CODE_TTL_SECONDS = 60;
 const BASE = import.meta.env.BASE_URL;
 
 function formatUptime(s: number): string {
@@ -102,22 +101,6 @@ export function Home() {
     }
   }, [status?.connected, status?.state, status?.sessionId]);
 
-  // Sync the latest code from server polling.
-  // Each QR cycle (~20 s) the server issues a fresh code. When polling detects
-  // a new non-null pairingCode, update the display and restart the countdown
-  // so the user always sees a valid, enterable code.
-  useEffect(() => {
-    if (
-      status?.pairingCode &&
-      status.pairingCode !== pairingCode &&
-      (phase === 'code_ready' || phase === 'waiting_confirm' || phase === 'expired')
-    ) {
-      setPairingCode(status.pairingCode);
-      setCountdown(CODE_TTL_SECONDS);
-      setPhase('code_ready');
-    }
-  }, [status?.pairingCode]);
-
   // Detect server-side session wipe only while waiting for WhatsApp to confirm
   useEffect(() => {
     if (
@@ -135,20 +118,6 @@ export function Home() {
       setErrorMsg(status.lastError);
     }
   }, [status?.lastError]);
-
-  // Countdown ticker
-  useEffect(() => {
-    if (countdown === null || countdown <= 0) {
-      if (countdown === 0 && phase === 'code_ready') {
-        setPhase('waiting_confirm');
-        // Tell server the code was (likely) entered
-        fetch(`${BASE}api/pair/entered`, { method: 'POST' }).catch(() => {});
-      }
-      return;
-    }
-    const id = setTimeout(() => setCountdown((c) => (c !== null ? c - 1 : null)), 1000);
-    return () => clearTimeout(id);
-  }, [countdown]);
 
   const requestMutation = useRequestPairingCode({
     mutation: {
@@ -173,6 +142,19 @@ export function Home() {
       },
     },
   });
+
+  // Countdown ticker — when the 60 s window expires, auto-request a fresh code
+  // so the user never has to manually click "retry" after a timeout.
+  useEffect(() => {
+    if (countdown === null || countdown <= 0) {
+      if (countdown === 0 && phase === 'code_ready' && phone) {
+        requestMutation.mutate({ data: { phoneNumber: phone } });
+      }
+      return;
+    }
+    const id = setTimeout(() => setCountdown((c) => (c !== null ? c - 1 : null)), 1000);
+    return () => clearTimeout(id);
+  }, [countdown]);
 
   function validatePhone(v: string): boolean {
     if (!/^\d{7,15}$/.test(v)) {
