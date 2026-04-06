@@ -2,7 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useGetPairingStatus, useRequestPairingCode, useGetServerStats } from '@workspace/api-client-react';
 import './home.css';
 
-const CODE_TTL_SECONDS = 60;
+// WhatsApp rotates the valid code window every ~20 s (one QR cycle).
+// The server issues a fresh code each cycle; the frontend follows suit.
+const CODE_TTL_SECONDS = 20;
 const BASE = import.meta.env.BASE_URL;
 
 function formatUptime(s: number): string {
@@ -100,8 +102,23 @@ export function Home() {
     }
   }, [status?.connected, status?.state, status?.sessionId]);
 
+  // Sync the latest code from server polling.
+  // Each QR cycle (~20 s) the server issues a fresh code. When polling detects
+  // a new non-null pairingCode, update the display and restart the countdown
+  // so the user always sees a valid, enterable code.
+  useEffect(() => {
+    if (
+      status?.pairingCode &&
+      status.pairingCode !== pairingCode &&
+      (phase === 'code_ready' || phase === 'waiting_confirm' || phase === 'expired')
+    ) {
+      setPairingCode(status.pairingCode);
+      setCountdown(CODE_TTL_SECONDS);
+      setPhase('code_ready');
+    }
+  }, [status?.pairingCode]);
+
   // Detect server-side session wipe only while waiting for WhatsApp to confirm
-  // (code_ready uses its own 60s countdown — don't race against stale poll data)
   useEffect(() => {
     if (
       phase === 'waiting_confirm' &&
