@@ -216,11 +216,7 @@ class BaileysSession extends EventEmitter {
             try {
               await delay(1500); // give WA server time to settle (mirrors reference impl)
 
-              // Custom prefix options — increases code readability  
-              const prefixes = ["TRUTHMD", "TRUTH", "TRUTHX"];
-              const prefix = prefixes[Math.floor(Math.random() * prefixes.length)];
-
-              const raw = await sock.requestPairingCode(cleanPhone, prefix);
+              const raw = await sock.requestPairingCode(cleanPhone);
               const code = raw?.replace(/-/g, "").match(/.{1,4}/g)?.join("-") ?? raw;
 
               recordCodeRequest(cleanPhone);
