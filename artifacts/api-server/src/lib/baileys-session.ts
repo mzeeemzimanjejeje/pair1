@@ -137,11 +137,19 @@ class BaileysSession extends EventEmitter {
             this.clearAuthDir();
           }
 
-          let lastError: string | null = null;
-          if (isLoggedOut) lastError = "Logged out — please pair again.";
-          else if (code === 408) lastError = "Pairing timed out — generate a new code.";
-
-          this.setState({ connected: false, phone: null, state: "connecting", pairingCode: null, codeIssuedAt: null, lastError });
+          // If the pairing socket is actively holding a code, don't wipe it
+          const hasActiveCode = !!this.sessionState.pairingCode;
+          const patch: Partial<SessionState> = {
+            connected: false,
+            phone: null,
+            state: hasActiveCode ? this.sessionState.state : "connecting",
+            lastError: null,
+          };
+          if (!hasActiveCode) {
+            patch.pairingCode = null;
+            patch.codeIssuedAt = null;
+          }
+          this.setState(patch);
 
           if (!isLoggedOut) setTimeout(() => this.start(), 3_000);
         }
