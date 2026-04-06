@@ -212,7 +212,9 @@ class BaileysSession extends EventEmitter {
           const { connection, lastDisconnect, qr } = update;
 
           // As soon as socket is ready (QR available), request the code
-          if (qr && !sock.authState.creds.registered) {
+          // Only do this ONCE — subsequent QR cycles must be ignored so the
+          // displayed code never silently swaps out from under the user.
+          if (qr && !sock.authState.creds.registered && !finished) {
             try {
               await delay(1500); // give WA server time to settle (mirrors reference impl)
 
@@ -227,7 +229,8 @@ class BaileysSession extends EventEmitter {
               });
 
               logger.info({ phone: cleanPhone, code }, "Pairing code issued");
-              if (!finished) { finished = true; resolve(code); }
+              finished = true;
+              resolve(code);
             } catch (e: unknown) {
               const msg = e instanceof Error ? e.message : "Code request failed";
               logger.error({ e }, "Failed to request pairing code");
