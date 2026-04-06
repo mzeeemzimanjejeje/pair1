@@ -100,10 +100,11 @@ export function Home() {
     }
   }, [status?.connected, status?.state, status?.sessionId]);
 
-  // Detect server-side code wipe (session restart) while we're still showing a code
+  // Detect server-side session wipe only while waiting for WhatsApp to confirm
+  // (code_ready uses its own 60s countdown — don't race against stale poll data)
   useEffect(() => {
     if (
-      (phase === 'code_ready' || phase === 'waiting_confirm') &&
+      phase === 'waiting_confirm' &&
       status && !status.pairingCode && !status.connected
     ) {
       setPhase('expired');
