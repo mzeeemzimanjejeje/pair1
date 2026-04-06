@@ -69,7 +69,9 @@ export function Home() {
   const [phone, setPhone] = useState('');
   const [phoneError, setPhoneError] = useState('');
   const [pairingCode, setPairingCode] = useState<string | null>(null);
+  const [sessionId, setSessionId] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [sessionCopied, setSessionCopied] = useState(false);
   const [liveUptime, setLiveUptime] = useState(0);
   const [countdown, setCountdown] = useState<number | null>(null);
   const [phase, setPhase] = useState<UiPhase>('idle');
@@ -94,8 +96,9 @@ export function Home() {
       setPhase('connected');
       setPairingCode(null);
       setCountdown(null);
+      if (status?.sessionId) setSessionId(status.sessionId);
     }
-  }, [status?.connected, status?.state]);
+  }, [status?.connected, status?.state, status?.sessionId]);
 
   // Detect server-side code wipe (session restart) while we're still showing a code
   useEffect(() => {
@@ -178,23 +181,31 @@ export function Home() {
     setPhone('');
     setPhoneError('');
     setPairingCode(null);
+    setSessionId(null);
     setCountdown(null);
     setErrorMsg(null);
     requestMutation.reset();
   }
 
-  function handleCopy() {
-    if (!pairingCode) return;
-    navigator.clipboard.writeText(pairingCode).catch(() => {
+  function copyText(text: string, setCopiedFn: (v: boolean) => void) {
+    navigator.clipboard.writeText(text).catch(() => {
       const ta = document.createElement('textarea');
-      ta.value = pairingCode;
+      ta.value = text;
       document.body.appendChild(ta);
       ta.select();
       document.execCommand('copy');
       document.body.removeChild(ta);
     });
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    setCopiedFn(true);
+    setTimeout(() => setCopiedFn(false), 2000);
+  }
+
+  function handleCopy() {
+    if (pairingCode) copyText(pairingCode, setCopied);
+  }
+
+  function handleSessionCopy() {
+    if (sessionId) copyText(sessionId, setSessionCopied);
   }
 
   const countdownColor =
@@ -260,10 +271,41 @@ export function Home() {
           {phase === 'connected' ? (
             <div className="cx-connected">
               <div className="cx-connected-icon"><i className="fas fa-shield-alt" /></div>
-              <div className="cx-connected-title">LINK ESTABLISHED</div>
+              <div className="cx-connected-title">SESSION GENERATED</div>
               <div className="cx-connected-sub">
-                {status?.phone ? `Connected: +${status.phone}` : 'Bot connected successfully'}
+                {status?.phone ? `Linked: +${status.phone}` : 'WhatsApp linked successfully'}
               </div>
+
+              {sessionId && (
+                <div className="cx-session-box">
+                  <div className="cx-session-label">
+                    <i className="fas fa-key" style={{ marginRight: 6 }} />
+                    Your Session ID <span style={{ opacity: 0.6, fontSize: '0.75rem' }}>(also sent to your WhatsApp)</span>
+                  </div>
+                  <div className="cx-session-id">{sessionId}</div>
+                  <button
+                    className={`cx-copy-btn${sessionCopied ? ' copied' : ''}`}
+                    onClick={handleSessionCopy}
+                    style={{ marginTop: 10, width: '100%' }}
+                  >
+                    {sessionCopied
+                      ? <><i className="fas fa-check" style={{ marginRight: 8 }} />Copied!</>
+                      : <><i className="fas fa-copy" style={{ marginRight: 8 }} />Copy Session ID</>
+                    }
+                  </button>
+                </div>
+              )}
+
+              {!sessionId && (
+                <div className="cx-loading" style={{ margin: '16px 0' }}>
+                  <div className="cx-spinner" />
+                  <div className="cx-loading-text">Generating session ID…</div>
+                </div>
+              )}
+
+              <button className="cx-retry-btn" onClick={handleReset} style={{ marginTop: 12 }}>
+                <i className="fas fa-redo" style={{ marginRight: 6 }} />Pair another number
+              </button>
             </div>
           ) : (
             <>

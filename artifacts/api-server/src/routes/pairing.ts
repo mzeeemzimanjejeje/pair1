@@ -15,6 +15,7 @@ router.get("/status", async (req: Request, res: Response) => {
       pairingCode: state.pairingCode ?? null,
       codeIssuedAt: state.codeIssuedAt ?? null,
       lastError: state.lastError ?? null,
+      sessionId: state.sessionId ?? null,
     });
   } catch (err) {
     req.log.error({ err }, "Failed to get pairing status");

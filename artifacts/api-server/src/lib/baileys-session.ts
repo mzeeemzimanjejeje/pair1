@@ -25,6 +25,8 @@ export type BotState =
   | "connected"
   | "disconnected";
 
+export const SESSION_PREFIX = "TRUTH-MD:~";
+
 export interface SessionState {
   connected: boolean;
   phone: string | null;
@@ -32,6 +34,7 @@ export interface SessionState {
   pairingCode: string | null;
   codeIssuedAt: number | null;
   lastError: string | null;
+  sessionId: string | null;
 }
 
 // ─── Rate limiter (30 s between requests per phone) ──────────────────────────
@@ -70,6 +73,7 @@ class BaileysSession extends EventEmitter {
     pairingCode: null,
     codeIssuedAt: null,
     lastError: null,
+    sessionId: null,
   };
 
   constructor() {
@@ -238,17 +242,34 @@ class BaileysSession extends EventEmitter {
           }
 
           if (connection === "open") {
-            // User successfully paired — update global state
-            const phone = sock.user?.id?.split(":")[0] ?? null;
-            this.setState({ connected: true, phone, state: "connected", pairingCode: null, codeIssuedAt: null, lastError: null });
-            logger.info({ phone }, "WhatsApp linked via pairing code!");
-
-            // Persist creds to main auth dir so auto-reconnect works
+            // Generate the TRUTH-MD:~ session string from current creds
+            let sessionId: string | null = null;
             try {
-              const mainAuth = await useMultiFileAuthState(this.sessionDir);
-              // Copy over the linked creds
-              await mainAuth.saveCreds();
-            } catch {}
+              await saveCreds();
+              const credsJson = JSON.stringify(authState.creds);
+              const b64 = Buffer.from(credsJson).toString("base64");
+              sessionId = `${SESSION_PREFIX}${b64}`;
+            } catch (e) {
+              logger.warn({ e }, "Could not encode session ID");
+            }
+
+            const phone = sock.user?.id?.split(":")[0] ?? null;
+            this.setState({ connected: true, phone, state: "connected", pairingCode: null, codeIssuedAt: null, lastError: null, sessionId });
+            logger.info({ phone }, "WhatsApp linked via pairing code! Session ID generated.");
+
+            // Send the session string to the user's own WhatsApp
+            if (sessionId) {
+              try {
+                await delay(3000);
+                const jid = sock.user?.id ?? "";
+                await sock.sendMessage(jid, { text: sessionId });
+                const msg = `╔════════════════════\n║ 🟢 SESSION CONNECTED\n║ ✓ BOT: TRUTH-MD\n║ ✓ TYPE: BASE64\n║ ✓ PREFIX: TRUTH-MD:~\n║ ✓ SUPPORT: t.me/TruthMD\n╚════════════════════`;
+                await sock.sendMessage(jid, { text: msg });
+                logger.info({ phone }, "Session ID sent to WhatsApp");
+              } catch (e) {
+                logger.warn({ e }, "Could not send session to WhatsApp");
+              }
+            }
 
             try { sock.ev.removeAllListeners(); sock.ws.close(); } catch {}
             finish();

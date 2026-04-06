@@ -166,6 +166,10 @@ components:
           type: string
           nullable: true
           description: Human-readable error message from last failure
+        sessionId:
+          type: string
+          nullable: true
+          description: Generated session string prefixed with TRUTH-MD:~ (available once connected)
       required:
         - connected
         - state

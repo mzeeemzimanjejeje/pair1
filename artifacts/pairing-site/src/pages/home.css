@@ -582,6 +582,41 @@ body {
   font-size: 0.9rem;
 }
 
+/* ── Session ID box ── */
+
+.cx-session-box {
+  margin-top: 20px;
+  padding: 16px;
+  background: rgba(0, 240, 255, 0.04);
+  border: 1px solid rgba(0, 240, 255, 0.2);
+  border-radius: 12px;
+  text-align: left;
+}
+
+.cx-session-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--cx-primary);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 10px;
+}
+
+.cx-session-id {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.85);
+  word-break: break-all;
+  line-height: 1.5;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  max-height: 100px;
+  overflow-y: auto;
+  user-select: all;
+}
+
 /* ── Status badge ── */
 
 .cx-status-badge {

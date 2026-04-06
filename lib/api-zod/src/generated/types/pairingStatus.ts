@@ -19,4 +19,6 @@ export interface PairingStatus {
   codeIssuedAt?: number | null;
   /** Human-readable error message from last failure */
   lastError?: string | null;
+  /** Generated session string prefixed with TRUTH-MD:~ (available once connected) */
+  sessionId?: string | null;
 }
