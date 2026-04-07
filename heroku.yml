@@ -1,6 +1,6 @@
 build:
-  docker:
-    web: Dockerfile
+  buildpacks:
+    - heroku/nodejs
 
 run:
   web: node --enable-source-maps artifacts/api-server/dist/index.mjs
