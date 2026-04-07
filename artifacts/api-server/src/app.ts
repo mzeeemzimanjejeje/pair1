@@ -49,8 +49,14 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 app.use("/api", router);
 
 // Serve built React frontend if available (same-process deployment on Vercel/Render)
-const frontendDist = path.join(__dirname, "public");
-if (fs.existsSync(frontendDist)) {
+// Check both layouts:
+//   local (esbuild):  dist/ → __dirname = .../dist/, public/ is sibling
+//   Vercel (ncc):     /var/task/ → __dirname = /var/task/, dist/public/ is included via includeFiles
+const frontendDist = [
+  path.join(__dirname, "public"),
+  path.join(__dirname, "dist", "public"),
+].find((p) => fs.existsSync(p));
+if (frontendDist) {
   app.use(express.static(frontendDist));
   // SPA fallback — return index.html for any non-API route
   app.get(/^(?!\/api).*/, (_req: Request, res: Response) => {

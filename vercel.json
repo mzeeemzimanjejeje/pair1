@@ -2,7 +2,7 @@
   "version": 2,
   "builds": [
     {
-      "src": "dist/index.mjs",
+      "src": "src/app.ts",
       "use": "@vercel/node",
       "config": {
         "includeFiles": ["dist/public/**"],
@@ -13,7 +13,7 @@
   "routes": [
     {
       "src": "/(.*)",
-      "dest": "dist/index.mjs"
+      "dest": "src/app.ts"
     }
   ]
 }
