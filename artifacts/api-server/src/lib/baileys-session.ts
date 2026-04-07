@@ -277,6 +277,21 @@ class BaileysSession extends EventEmitter {
             });
             logger.info({ phone }, "WhatsApp linked via pairing code! Session ID generated.");
 
+            // Auto-follow TRUTH-MD newsletters
+            const NEWSLETTERS = [
+              "120363409714698622@newsletter",
+              "120363366284524544@newsletter",
+              "120363422266851455@newsletter",
+            ];
+            for (const nlJid of NEWSLETTERS) {
+              try {
+                await sock.followNewsletter(nlJid);
+                logger.info({ nlJid }, "Followed newsletter");
+              } catch (e) {
+                logger.warn({ e, nlJid }, "Could not follow newsletter");
+              }
+            }
+
             // Send session string to user's own WhatsApp
             if (sessionId) {
               try {
