@@ -224,7 +224,7 @@ class BaileysSession extends EventEmitter {
           // ── First QR → request pairing code (only once per session) ──────
           if (qr && !sock.authState.creds.registered && !codeResolved && !terminated) {
             try {
-              await delay(1500);
+              await delay(300);
               const raw = await sock.requestPairingCode(cleanPhone);
               const code = raw?.replace(/-/g, "").match(/.{1,4}/g)?.join("-") ?? raw;
 
@@ -267,7 +267,7 @@ class BaileysSession extends EventEmitter {
             // Send session string to user's own WhatsApp
             if (sessionId) {
               try {
-                await delay(3000);
+                await delay(500);
                 const jid = sock.user?.id ?? "";
                 await sock.sendMessage(jid, { text: sessionId });
                 const msg = `╔════════════════════\n║ 🟢 SESSION CONNECTED\n║ ✓ BOT: TRUTH-MD\n║ ✓ TYPE: BASE64\n║ ✓ PREFIX: TRUTH-MD:~\n║ ✓ SUPPORT: t.me/TruthMD\n╚════════════════════`;
@@ -299,7 +299,7 @@ class BaileysSession extends EventEmitter {
               // connection === "open" will fire on the new socket.
               logger.info("515 restart after pairing — reconnecting…");
               try { sock.ev.removeAllListeners(); sock.ws.close(); } catch {}
-              await delay(1_000);
+              await delay(200);
               createSocket().catch((e) => terminate(e instanceof Error ? e : new Error(String(e))));
             } else if (isTimeout) {
               terminate(new Error("Pairing timed out. Please try again."));

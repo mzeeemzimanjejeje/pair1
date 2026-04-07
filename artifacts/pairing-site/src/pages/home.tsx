@@ -78,8 +78,8 @@ export function Home() {
   const [phase, setPhase] = useState<UiPhase>('idle');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // Status polling — every 3 s
-  const { data: status } = useGetPairingStatus({ query: { refetchInterval: 3000 } });
+  // Status polling — every 1 s for snappy connected/session detection
+  const { data: status } = useGetPairingStatus({ query: { refetchInterval: 1000 } });
   const { data: stats }  = useGetServerStats({   query: { refetchInterval: 5000 } });
 
   // Sync uptime from server, then tick locally
