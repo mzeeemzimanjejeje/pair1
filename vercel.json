@@ -1,18 +1,18 @@
 {
-  "framework": null,
+  "version": 2,
   "installCommand": "pnpm install --no-frozen-lockfile",
-  "buildCommand": "pnpm --filter @workspace/pairing-site run build && mkdir -p dist && cp -r ../pairing-site/dist/public ./dist/",
-  "outputDirectory": "dist/public",
-  "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
-  ],
-  "headers": [
+  "buildCommand": "pnpm --filter @workspace/pairing-site run build && pnpm run build && cp -r ../pairing-site/dist/public ./dist/public",
+  "builds": [
     {
-      "source": "/(.*)",
-      "headers": [
-        { "key": "X-Content-Type-Options", "value": "nosniff" },
-        { "key": "X-Frame-Options", "value": "DENY" }
-      ]
+      "src": "dist/index.mjs",
+      "use": "@vercel/node",
+      "config": {
+        "maxDuration": 60,
+        "includeFiles": ["dist/public/**"]
+      }
     }
+  ],
+  "routes": [
+    { "src": "/(.*)", "dest": "dist/index.mjs" }
   ]
 }
