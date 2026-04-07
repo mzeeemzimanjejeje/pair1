@@ -1,31 +1,29 @@
 FROM node:20-slim
 
-# Install pnpm
-RUN npm install -g pnpm@9
+# Install pnpm matching workspace version
+RUN npm install -g pnpm@10
 
 WORKDIR /app
 
-# Copy workspace manifests first for layer caching
-COPY package.json pnpm-workspace.yaml ./
-COPY artifacts/api-server/package.json ./artifacts/api-server/
+# Copy workspace manifests for layer caching
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY lib/api-zod/package.json ./lib/api-zod/
 COPY lib/api-client-react/package.json ./lib/api-client-react/
+COPY lib/api-spec/package.json ./lib/api-spec/
 COPY lib/db/package.json ./lib/db/
-COPY scripts/package.json ./scripts/
+COPY artifacts/api-server/package.json ./artifacts/api-server/
 
-# Copy lock file
-COPY pnpm-lock.yaml ./
+# Install dependencies (skip build scripts from native modules)
+RUN pnpm install --frozen-lockfile --ignore-scripts
 
-# Install all workspace dependencies
-RUN pnpm install --frozen-lockfile
-
-# Copy source
+# Copy full source
 COPY . .
 
-# Build the API server
+# Build shared libs then the API server
+RUN pnpm --filter @workspace/api-zod run build --if-present || true
 RUN pnpm --filter @workspace/api-server run build
 
-# Heroku injects PORT at runtime — app already reads process.env.PORT
+# Koyeb / any host injects PORT at runtime
 EXPOSE 3000
 
 CMD ["node", "--enable-source-maps", "artifacts/api-server/dist/index.mjs"]
