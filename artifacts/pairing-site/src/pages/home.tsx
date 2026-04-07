@@ -159,9 +159,16 @@ export function Home() {
     return true;
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!validatePhone(phone)) return;
+    // If a previous session is still active, reset it first before re-pairing
+    if (phase === 'connected' || sessionId) {
+      try {
+        await fetch(`${BASE}api/pair/reset`, { method: 'POST' });
+      } catch { /* ignore */ }
+      setSessionId(null);
+    }
     requestMutation.mutate({ data: { phoneNumber: phone } });
   }
 
@@ -261,13 +268,19 @@ export function Home() {
         {/* ── Pairing card ── */}
         <div className="cx-container">
 
-          {/* Connected state */}
-          {phase === 'connected' ? (
+          {/* ── Session box (shown when connected, above everything else) ── */}
+          {phase === 'connected' && (
             <div className="cx-connected">
-              <div className="cx-connected-icon"><i className="fas fa-shield-alt" /></div>
-              <div className="cx-connected-title">SESSION GENERATED</div>
-              <div className="cx-connected-sub">
-                {status?.phone ? `Linked: +${status.phone}` : 'WhatsApp linked successfully'}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+                <div className="cx-connected-icon" style={{ width: 36, height: 36, fontSize: '1.1rem' }}>
+                  <i className="fas fa-shield-alt" />
+                </div>
+                <div>
+                  <div className="cx-connected-title" style={{ fontSize: '1rem', marginBottom: 2 }}>SESSION GENERATED</div>
+                  <div className="cx-connected-sub" style={{ fontSize: '0.78rem' }}>
+                    {status?.phone ? `Linked: +${status.phone}` : 'WhatsApp linked successfully'}
+                  </div>
+                </div>
               </div>
 
               {sessionId && (
@@ -291,48 +304,48 @@ export function Home() {
               )}
 
               {!sessionId && (
-                <div className="cx-loading" style={{ margin: '16px 0' }}>
+                <div className="cx-loading" style={{ margin: '12px 0 4px' }}>
                   <div className="cx-spinner" />
                   <div className="cx-loading-text">Generating session ID…</div>
                 </div>
               )}
 
-              <button className="cx-retry-btn" onClick={handleReset} style={{ marginTop: 12 }}>
-                <i className="fas fa-redo" style={{ marginRight: 6 }} />Pair another number
-              </button>
+              <div style={{ height: 1, background: 'rgba(255,255,255,0.08)', margin: '14px 0 6px' }} />
             </div>
-          ) : (
-            <>
-              <div className="cx-header">
-                <h1 className="cx-title">TRUTH-MD</h1>
-                <p className="cx-subtitle">Enter your WhatsApp number with country code</p>
-              </div>
+          )}
 
-              {/* Live status badge */}
-              <StatusBadge phase={phase} error={errorMsg} />
+          {/* ── Always-visible header + form ── */}
+          <>
+            <div className="cx-header">
+              <h1 className="cx-title">TRUTH-MD</h1>
+              <p className="cx-subtitle">Enter your WhatsApp number with country code</p>
+            </div>
 
-              {/* ── Idle / error / expired → show form ── */}
-              {(phase === 'idle' || phase === 'error' || phase === 'expired') && (
-                <form onSubmit={handleSubmit} style={{ marginTop: 16 }}>
-                  <div className="cx-input-field">
-                    <input
-                      type="tel"
-                      inputMode="numeric"
-                      placeholder="2547xxxxxxxx"
-                      value={phone}
-                      onChange={(e) => {
-                        setPhone(e.target.value.replace(/\D/g, ''));
-                        if (phoneError) setPhoneError('');
-                      }}
-                      autoComplete="off"
-                    />
-                    {phoneError && <div className="cx-error">{phoneError}</div>}
-                  </div>
-                  <button type="submit" className="cx-btn">
-                    {phase === 'expired' ? 'Get Fresh Code' : 'Generate Pair Code'}
-                  </button>
-                </form>
-              )}
+            {/* Live status badge */}
+            <StatusBadge phase={phase} error={errorMsg} />
+
+            {/* ── Idle / error / expired / connected → show form ── */}
+            {(phase === 'idle' || phase === 'error' || phase === 'expired' || phase === 'connected') && (
+              <form onSubmit={handleSubmit} style={{ marginTop: 16 }}>
+                <div className="cx-input-field">
+                  <input
+                    type="tel"
+                    inputMode="numeric"
+                    placeholder="2547xxxxxxxx"
+                    value={phone}
+                    onChange={(e) => {
+                      setPhone(e.target.value.replace(/\D/g, ''));
+                      if (phoneError) setPhoneError('');
+                    }}
+                    autoComplete="off"
+                  />
+                  {phoneError && <div className="cx-error">{phoneError}</div>}
+                </div>
+                <button type="submit" className="cx-btn">
+                  {phase === 'connected' ? 'Pair Another Number' : phase === 'expired' ? 'Get Fresh Code' : 'Generate Pair Code'}
+                </button>
+              </form>
+            )}
 
               {/* ── Generating ── */}
               {phase === 'generating' && (
@@ -415,7 +428,6 @@ export function Home() {
                 </div>
               )}
             </>
-          )}
         </div>
       </div>
     </>
