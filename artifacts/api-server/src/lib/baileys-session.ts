@@ -132,6 +132,13 @@ class BaileysSession extends EventEmitter {
 
           logger.info({ statusCode: code }, "Connection closed");
 
+          // If the pairing socket already completed, don't let the background
+          // socket's timeout/close wipe the connected state.
+          if (this.sessionState.state === "connected") {
+            logger.info("Background socket closed after pairing completed — ignoring");
+            return;
+          }
+
           if (isLoggedOut || code === 408) {
             fullyConnected = false;
             this.clearAuthDir();
