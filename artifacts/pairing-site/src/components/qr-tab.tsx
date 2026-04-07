@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useGetPairingQr } from '@workspace/api-client-react';
 import { RefreshCw, RotateCcw } from 'lucide-react';
 import { Button } from './ui/button';
+import { getApiBase } from '@/lib/api-base';
 
 export function QrTab() {
   const [isResetting, setIsResetting] = useState(false);
@@ -13,7 +14,7 @@ export function QrTab() {
   const handleReset = async () => {
     setIsResetting(true);
     try {
-      await fetch(`${import.meta.env.BASE_URL}api/pair/reset`, { method: 'POST' });
+      await fetch(`${getApiBase()}api/pair/reset`, { method: 'POST' });
       // Wait a moment for the new session to initialize
       setTimeout(() => {
         refetch();

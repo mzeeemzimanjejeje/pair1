@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useGetPairingStatus, useRequestPairingCode, useGetServerStats } from '@workspace/api-client-react';
+import { getApiBase } from '@/lib/api-base';
 import './home.css';
 
 // Countdown display duration — 2 minutes (informational; code stays visible after).
 const CODE_TTL_SECONDS = 120;
-const BASE = import.meta.env.BASE_URL;
+const BASE = getApiBase();
 
 function formatUptime(s: number): string {
   const h = Math.floor(s / 3600);
