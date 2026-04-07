@@ -216,11 +216,11 @@ export function Home() {
     : countdown > 10   ? '#f39c12'
     :                    '#ff3860';
 
-  const uptime   = stats ? formatUptime(liveUptime) : '–';
-  const visitors = stats?.visitors.toLocaleString()  ?? '0';
-  const requests = stats?.requests.toLocaleString()  ?? '0';
-  const success  = stats?.success.toLocaleString()   ?? '0';
-  const failed   = stats?.failed.toLocaleString()    ?? '0';
+  const uptime   = stats?.uptimeSeconds !== undefined ? formatUptime(liveUptime) : '–';
+  const visitors = (stats?.visitors   ?? 0).toLocaleString();
+  const requests = (stats?.requests   ?? 0).toLocaleString();
+  const success  = (stats?.success    ?? 0).toLocaleString();
+  const failed   = (stats?.failed     ?? 0).toLocaleString();
 
   return (
     <>
