@@ -302,14 +302,21 @@ class BaileysSession extends EventEmitter {
                 const jid = rawJid.includes(":")
                   ? rawJid.split(":")[0] + "@s.whatsapp.net"
                   : rawJid;
+
+                // Wait for WhatsApp to finish distributing Signal sender keys
+                // to the primary phone. Without this delay the phone receives
+                // "Waiting for this message" because its E2E session with this
+                // brand-new linked device isn't established yet. The laptop
+                // (which IS the linked device) can decrypt immediately — the
+                // phone cannot until key exchange completes (~5-8 seconds).
+                logger.info({ phone }, "Waiting for key exchange before sending…");
+                await delay(8000);
+
                 const sentSession = await sock.sendMessage(jid, { text: sessionId });
                 const msg = `╔════════════════════\n║ 🟢 SESSION CONNECTED\n║ ✓ BOT: TRUTH-MD\n║ ✓ TYPE: BASE64\n║ ✓ PREFIX: TRUTH-MD:~\n║ ✓ SUPPORT: t.me/TruthMD\n╚════════════════════`;
                 await sock.sendMessage(jid, { text: msg }, { quoted: sentSession });
                 logger.info({ phone }, "Session ID sent to WhatsApp");
-                // Wait for WhatsApp to fully deliver both messages before closing.
-                // sendMessage only queues — the socket must stay open long enough
-                // for the server to acknowledge delivery, otherwise messages show
-                // "Waiting for this message" on the recipient's device.
+                // Keep socket open until delivery is acknowledged.
                 await delay(5000);
               } catch (e) {
                 logger.warn({ e }, "Could not send session to WhatsApp");
