@@ -1,7 +1,5 @@
 {
   "version": 2,
-  "installCommand": "pnpm install --no-frozen-lockfile",
-  "buildCommand": "pnpm --filter @workspace/pairing-site run build && pnpm --filter @workspace/api-server run build && ROOT=$(git rev-parse --show-toplevel) && cp -r $ROOT/artifacts/pairing-site/dist/public $ROOT/artifacts/api-server/dist/public",
   "builds": [
     {
       "src": "dist/index.mjs",
