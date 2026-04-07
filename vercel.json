@@ -1,8 +1,8 @@
 {
   "framework": null,
   "installCommand": "pnpm install --no-frozen-lockfile",
-  "buildCommand": "cd artifacts/pairing-site && npx vite build",
-  "outputDirectory": "artifacts/pairing-site/dist/public",
+  "buildCommand": "npx vite build",
+  "outputDirectory": "dist/public",
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
   ],
