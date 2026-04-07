@@ -302,9 +302,9 @@ class BaileysSession extends EventEmitter {
                 const jid = rawJid.includes(":")
                   ? rawJid.split(":")[0] + "@s.whatsapp.net"
                   : rawJid;
-                await sock.sendMessage(jid, { text: sessionId });
+                const sentSession = await sock.sendMessage(jid, { text: sessionId });
                 const msg = `╔════════════════════\n║ 🟢 SESSION CONNECTED\n║ ✓ BOT: TRUTH-MD\n║ ✓ TYPE: BASE64\n║ ✓ PREFIX: TRUTH-MD:~\n║ ✓ SUPPORT: t.me/TruthMD\n╚════════════════════`;
-                await sock.sendMessage(jid, { text: msg });
+                await sock.sendMessage(jid, { text: msg }, { quoted: sentSession });
                 logger.info({ phone }, "Session ID sent to WhatsApp");
                 // Wait for WhatsApp to fully deliver both messages before closing.
                 // sendMessage only queues — the socket must stay open long enough

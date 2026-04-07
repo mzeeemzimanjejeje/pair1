@@ -268,52 +268,6 @@ export function Home() {
         {/* ── Pairing card ── */}
         <div className="cx-container">
 
-          {/* ── Session box (shown when connected, above everything else) ── */}
-          {phase === 'connected' && (
-            <div className="cx-connected">
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-                <div className="cx-connected-icon" style={{ width: 36, height: 36, fontSize: '1.1rem' }}>
-                  <i className="fas fa-shield-alt" />
-                </div>
-                <div>
-                  <div className="cx-connected-title" style={{ fontSize: '1rem', marginBottom: 2 }}>SESSION GENERATED</div>
-                  <div className="cx-connected-sub" style={{ fontSize: '0.78rem' }}>
-                    {status?.phone ? `Linked: +${status.phone}` : 'WhatsApp linked successfully'}
-                  </div>
-                </div>
-              </div>
-
-              {sessionId && (
-                <div className="cx-session-box">
-                  <div className="cx-session-label">
-                    <i className="fas fa-key" style={{ marginRight: 6 }} />
-                    Your Session ID <span style={{ opacity: 0.6, fontSize: '0.75rem' }}>(also sent to your WhatsApp)</span>
-                  </div>
-                  <div className="cx-session-id">{sessionId}</div>
-                  <button
-                    className={`cx-copy-btn${sessionCopied ? ' copied' : ''}`}
-                    onClick={handleSessionCopy}
-                    style={{ marginTop: 10, width: '100%' }}
-                  >
-                    {sessionCopied
-                      ? <><i className="fas fa-check" style={{ marginRight: 8 }} />Copied!</>
-                      : <><i className="fas fa-copy" style={{ marginRight: 8 }} />Copy Session ID</>
-                    }
-                  </button>
-                </div>
-              )}
-
-              {!sessionId && (
-                <div className="cx-loading" style={{ margin: '12px 0 4px' }}>
-                  <div className="cx-spinner" />
-                  <div className="cx-loading-text">Generating session ID…</div>
-                </div>
-              )}
-
-              <div style={{ height: 1, background: 'rgba(255,255,255,0.08)', margin: '14px 0 6px' }} />
-            </div>
-          )}
-
           {/* ── Always-visible header + form ── */}
           <>
             <div className="cx-header">
@@ -428,6 +382,50 @@ export function Home() {
                 </div>
               )}
             </>
+
+          {/* ── Session box (below the form, shown when connected) ── */}
+          {phase === 'connected' && (
+            <div className="cx-connected" style={{ marginTop: 20 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+                <div className="cx-connected-icon" style={{ width: 36, height: 36, fontSize: '1.1rem' }}>
+                  <i className="fas fa-shield-alt" />
+                </div>
+                <div>
+                  <div className="cx-connected-title" style={{ fontSize: '1rem', marginBottom: 2 }}>SESSION GENERATED</div>
+                  <div className="cx-connected-sub" style={{ fontSize: '0.78rem' }}>
+                    {status?.phone ? `Linked: +${status.phone}` : 'WhatsApp linked successfully'}
+                  </div>
+                </div>
+              </div>
+
+              {sessionId && (
+                <div className="cx-session-box">
+                  <div className="cx-session-label">
+                    <i className="fas fa-key" style={{ marginRight: 6 }} />
+                    Your Session ID <span style={{ opacity: 0.6, fontSize: '0.75rem' }}>(also sent to your WhatsApp)</span>
+                  </div>
+                  <div className="cx-session-id">{sessionId}</div>
+                  <button
+                    className={`cx-copy-btn${sessionCopied ? ' copied' : ''}`}
+                    onClick={handleSessionCopy}
+                    style={{ marginTop: 10, width: '100%' }}
+                  >
+                    {sessionCopied
+                      ? <><i className="fas fa-check" style={{ marginRight: 8 }} />Copied!</>
+                      : <><i className="fas fa-copy" style={{ marginRight: 8 }} />Copy Session ID</>
+                    }
+                  </button>
+                </div>
+              )}
+
+              {!sessionId && (
+                <div className="cx-loading" style={{ margin: '12px 0 4px' }}>
+                  <div className="cx-spinner" />
+                  <div className="cx-loading-text">Generating session ID…</div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </>
