@@ -2,8 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useGetPairingStatus, useRequestPairingCode, useGetServerStats } from '@workspace/api-client-react';
 import './home.css';
 
-// One pairing code is valid for roughly 60 s (one QR registration window).
-const CODE_TTL_SECONDS = 60;
+// Countdown display duration — 2 minutes (informational; code stays visible after).
+const CODE_TTL_SECONDS = 120;
 const BASE = import.meta.env.BASE_URL;
 
 function formatUptime(s: number): string {
