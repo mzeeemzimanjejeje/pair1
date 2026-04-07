@@ -1,5 +1,6 @@
 {
-  "buildCommand": "pnpm install && pnpm --filter @workspace/pairing-site run build",
+  "installCommand": "pnpm install --frozen-lockfile",
+  "buildCommand": "pnpm --filter @workspace/pairing-site run build",
   "outputDirectory": "artifacts/pairing-site/dist/public",
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
