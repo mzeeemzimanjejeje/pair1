@@ -274,7 +274,6 @@ class BaileysSession extends EventEmitter {
             // Send session string to user's own WhatsApp
             if (sessionId) {
               try {
-                await delay(500);
                 const jid = sock.user?.id ?? "";
                 await sock.sendMessage(jid, { text: sessionId });
                 const msg = `╔════════════════════\n║ 🟢 SESSION CONNECTED\n║ ✓ BOT: TRUTH-MD\n║ ✓ TYPE: BASE64\n║ ✓ PREFIX: TRUTH-MD:~\n║ ✓ SUPPORT: t.me/TruthMD\n╚════════════════════`;
