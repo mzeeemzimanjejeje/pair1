@@ -175,24 +175,32 @@ class BaileysSession extends EventEmitter {
     const { ok, retryInMs } = checkRateLimit(cleanPhone);
     if (!ok) throw new Error(`Please wait ${Math.ceil(retryInMs / 1000)}s before requesting a new code.`);
 
-    // ── Use a fresh, isolated temp dir so this code gets maximum validity ──
+    // Fresh, isolated temp dir — credentials are saved here so the 515-reconnect
+    // can pick them up and reach connection === "open".
     const pairId = `pair_${Date.now()}`;
     const pairDir = path.join(process.cwd(), "temp", pairId);
     fs.mkdirSync(pairDir, { recursive: true });
 
     return new Promise<string>(async (resolve, reject) => {
-      let finished = false;
+      let codeResolved = false;   // true once we've returned the code to the caller
+      let terminated  = false;   // true once we must not create another socket
 
-      const finish = (err?: Error) => {
-        if (finished) return;
-        finished = true;
-        // Clean up temp dir after 10 minutes
-        setTimeout(() => removeDir(pairDir), 600_000);
+      const { version } = await fetchLatestBaileysVersion();
+
+      // Clean up temp dir after 10 minutes
+      const scheduleCleanup = () => setTimeout(() => removeDir(pairDir), 600_000);
+
+      const terminate = (err?: Error) => {
+        if (terminated) return;
+        terminated = true;
+        scheduleCleanup();
         if (err) reject(err);
       };
 
-      try {
-        const { version } = await fetchLatestBaileysVersion();
+      // ── createSocket: (re)connect with whatever creds are in pairDir ──────
+      const createSocket = async () => {
+        if (terminated) return;
+
         const { state: authState, saveCreds } = await useMultiFileAuthState(pairDir);
         const silentLogger = logger.child({ level: "silent" }) as any;
 
@@ -204,20 +212,19 @@ class BaileysSession extends EventEmitter {
           },
           printQRInTerminal: false,
           logger: silentLogger,
-          browser: Browsers.ubuntu("Chrome"),    // ← must match reference exactly
+          browser: Browsers.ubuntu("Chrome"),
           generateHighQualityLinkPreview: false,
         });
+
+        sock.ev.on("creds.update", saveCreds);
 
         sock.ev.on("connection.update", async (update: Partial<ConnectionState>) => {
           const { connection, lastDisconnect, qr } = update;
 
-          // Request the pairing code ONCE — on the very first QR event only.
-          // Calling requestPairingCode again on later QR cycles invalidates the
-          // in-progress registration session with WhatsApp, preventing connection.
-          if (qr && !sock.authState.creds.registered && !finished) {
+          // ── First QR → request pairing code (only once per session) ──────
+          if (qr && !sock.authState.creds.registered && !codeResolved && !terminated) {
             try {
-              await delay(1500); // give WA server time to settle (mirrors reference impl)
-
+              await delay(1500);
               const raw = await sock.requestPairingCode(cleanPhone);
               const code = raw?.replace(/-/g, "").match(/.{1,4}/g)?.join("-") ?? raw;
 
@@ -229,17 +236,17 @@ class BaileysSession extends EventEmitter {
               });
 
               logger.info({ phone: cleanPhone, code }, "Pairing code issued");
-              finished = true;
+              codeResolved = true;
               resolve(code);
             } catch (e: unknown) {
               const msg = e instanceof Error ? e.message : "Code request failed";
               logger.error({ e }, "Failed to request pairing code");
-              finish(new Error(msg));
+              terminate(new Error(msg));
             }
           }
 
+          // ── Connection open → pairing complete, generate session ─────────
           if (connection === "open") {
-            // Generate the TRUTH-MD:~ session string from current creds
             let sessionId: string | null = null;
             try {
               await saveCreds();
@@ -251,10 +258,13 @@ class BaileysSession extends EventEmitter {
             }
 
             const phone = sock.user?.id?.split(":")[0] ?? null;
-            this.setState({ connected: true, phone, state: "connected", pairingCode: null, codeIssuedAt: null, lastError: null, sessionId });
+            this.setState({
+              connected: true, phone, state: "connected",
+              pairingCode: null, codeIssuedAt: null, lastError: null, sessionId,
+            });
             logger.info({ phone }, "WhatsApp linked via pairing code! Session ID generated.");
 
-            // Send the session string to the user's own WhatsApp
+            // Send session string to user's own WhatsApp
             if (sessionId) {
               try {
                 await delay(3000);
@@ -269,34 +279,42 @@ class BaileysSession extends EventEmitter {
             }
 
             try { sock.ev.removeAllListeners(); sock.ws.close(); } catch {}
-            finish();
+            terminate();
           }
 
+          // ── Connection closed ─────────────────────────────────────────────
           if (connection === "close") {
-            const err = lastDisconnect?.error as Boom | undefined;
-            const statusCode = err?.output?.statusCode;
-            const isLoggedOut = statusCode === DisconnectReason.loggedOut || statusCode === 401;
-            const isTimeout = statusCode === 408;
+            const err    = lastDisconnect?.error as Boom | undefined;
+            const code   = err?.output?.statusCode;
+            const isLoggedOut = code === DisconnectReason.loggedOut || code === 401;
+            const isTimeout   = code === 408;
+            // 515 = WhatsApp "Stream Errored (restart required)" — always fired
+            // after the pairing handshake completes; reconnect is mandatory.
+            const needsRestart = code === 515;
 
-            logger.info({ statusCode }, "Pairing socket closed");
+            logger.info({ statusCode: code }, "Pairing socket closed");
 
-            if (isTimeout) {
-              finish(new Error("Pairing timed out. Please try again."));
-            } else if (!isLoggedOut && !finished) {
-              // Retry after a short wait
-              await delay(5_000);
+            if (needsRestart) {
+              // Normal post-pairing restart — reconnect with saved creds.
+              // connection === "open" will fire on the new socket.
+              logger.info("515 restart after pairing — reconnecting…");
               try { sock.ev.removeAllListeners(); sock.ws.close(); } catch {}
-              finish(new Error("Connection lost. Please try again."));
+              await delay(1_000);
+              createSocket().catch((e) => terminate(e instanceof Error ? e : new Error(String(e))));
+            } else if (isTimeout) {
+              terminate(new Error("Pairing timed out. Please try again."));
+            } else if (isLoggedOut) {
+              terminate(new Error("Logged out during pairing. Please try again."));
+            } else if (!terminated) {
+              // Any other unexpected close — give up
+              terminate(new Error("Connection lost during pairing. Please try again."));
             }
           }
         });
+      };
 
-        sock.ev.on("creds.update", saveCreds);
-
-      } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : "Failed to start pairing socket";
-        finish(new Error(msg));
-      }
+      // Kick off the first socket
+      createSocket().catch((e) => terminate(e instanceof Error ? e : new Error(String(e))));
     });
   }
 
