@@ -311,7 +311,7 @@ export function Home() {
             <>
               <div className="cx-header">
                 <h1 className="cx-title">TRUTH-MD</h1>
-                <p className="cx-subtitle">Link your WhatsApp — enter your number below</p>
+                <p className="cx-subtitle">Enter your WhatsApp number with country code</p>
               </div>
 
               {/* Live status badge */}
@@ -351,42 +351,42 @@ export function Home() {
               {/* ── Code ready ── */}
               {phase === 'code_ready' && pairingCode && (
                 <div className="cx-result">
-                  <div className="cx-result-label">Your Pairing Code</div>
-                  <div className="cx-code-display">{pairingCode}</div>
+                  <div className="cx-result-label">
+                    <i className="fas fa-key" style={{ marginRight: 8 }} />
+                    Pairing Code Generated
+                  </div>
+
+                  <div className="cx-code-box">{pairingCode}</div>
 
                   {countdown !== null && (
                     <div className="cx-countdown" style={{ color: countdownColor }}>
-                      <i className="fas fa-clock" style={{ marginRight: 6 }} />
-                      Valid for <strong>{countdown}s</strong> — enter this in WhatsApp now
+                      <i className="fas fa-clock" style={{ marginRight: 5 }} />
+                      Refreshes in <strong>{countdown}s</strong>
                     </div>
                   )}
 
                   <button
-                    className={`cx-copy-btn${copied ? ' copied' : ''}`}
+                    className={`cx-copy-btn cx-copy-btn-full${copied ? ' copied' : ''}`}
                     onClick={handleCopy}
                   >
                     {copied
                       ? <><i className="fas fa-check" style={{ marginRight: 8 }} />Copied!</>
-                      : <><i className="fas fa-copy" style={{ marginRight: 8 }} />Copy Code</>
+                      : <><i className="fas fa-clone" style={{ marginRight: 8 }} />Copy Code</>
                     }
                   </button>
 
                   <div className="cx-instructions">
                     <div className="cx-step">
                       <span className="cx-step-num">1</span>
-                      Open <b>WhatsApp</b> on your phone
+                      Open <b>WhatsApp</b> → <b>Linked Devices</b> → <b>Link a Device</b>
                     </div>
                     <div className="cx-step">
                       <span className="cx-step-num">2</span>
-                      Tap <b>⋮ Menu</b> → <b>Linked Devices</b> → <b>Link a Device</b>
-                    </div>
-                    <div className="cx-step">
-                      <span className="cx-step-num">3</span>
                       Tap <b>"Link with phone number instead"</b>
                     </div>
                     <div className="cx-step">
-                      <span className="cx-step-num">4</span>
-                      Enter the 8-character code shown above
+                      <span className="cx-step-num">3</span>
+                      Enter the code above — session string will arrive on your WhatsApp
                     </div>
                   </div>
 
