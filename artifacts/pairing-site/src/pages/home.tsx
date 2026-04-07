@@ -342,7 +342,7 @@ export function Home() {
                   {phoneError && <div className="cx-error">{phoneError}</div>}
                 </div>
                 <button type="submit" className="cx-btn">
-                  {phase === 'connected' ? 'Pair Another Number' : phase === 'expired' ? 'Get Fresh Code' : 'Generate Pair Code'}
+                  {phase === 'connected' ? 'Get New Code' : phase === 'expired' ? 'Get Fresh Code' : 'Generate Pair Code'}
                 </button>
               </form>
             )}

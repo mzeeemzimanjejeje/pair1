@@ -221,6 +221,12 @@ class BaileysSession extends EventEmitter {
           logger: silentLogger,
           browser: Browsers.ubuntu("Chrome"),
           generateHighQualityLinkPreview: false,
+          // Do not request full history — prevents WhatsApp from showing
+          // "Syncing" indefinitely and avoids blocking connection events.
+          syncFullHistory: false,
+          shouldSyncHistoryMessage: () => false,
+          // Stub message retrieval (not needed for pairing-only flow)
+          getMessage: async () => undefined,
         });
 
         sock.ev.on("creds.update", saveCreds);
