@@ -1,7 +1,7 @@
 {
   "framework": null,
   "installCommand": "pnpm install --no-frozen-lockfile",
-  "buildCommand": "pnpm run build",
+  "buildCommand": "pnpm --filter @workspace/pairing-site run build && mkdir -p dist && cp -r ../pairing-site/dist/public ./dist/",
   "outputDirectory": "dist/public",
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
