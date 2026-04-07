@@ -143,15 +143,9 @@ export function Home() {
     },
   });
 
-  // Countdown ticker — when the 60 s window expires, auto-request a fresh code
-  // so the user never has to manually click "retry" after a timeout.
+  // Countdown ticker — purely informational, stops at 0 (no auto-request)
   useEffect(() => {
-    if (countdown === null || countdown <= 0) {
-      if (countdown === 0 && phase === 'code_ready' && phone) {
-        requestMutation.mutate({ data: { phoneNumber: phone } });
-      }
-      return;
-    }
+    if (countdown === null || countdown <= 0) return;
     const id = setTimeout(() => setCountdown((c) => (c !== null ? c - 1 : null)), 1000);
     return () => clearTimeout(id);
   }, [countdown]);
@@ -358,10 +352,16 @@ export function Home() {
 
                   <div className="cx-code-box">{pairingCode}</div>
 
-                  {countdown !== null && (
+                  {countdown !== null && countdown > 0 && (
                     <div className="cx-countdown" style={{ color: countdownColor }}>
                       <i className="fas fa-clock" style={{ marginRight: 5 }} />
-                      Refreshes in <strong>{countdown}s</strong>
+                      Valid for <strong>{countdown}s</strong> — enter this in WhatsApp now
+                    </div>
+                  )}
+                  {countdown !== null && countdown <= 0 && (
+                    <div className="cx-countdown" style={{ color: '#f39c12' }}>
+                      <i className="fas fa-exclamation-triangle" style={{ marginRight: 5 }} />
+                      Code may have expired — generate a new one if needed
                     </div>
                   )}
 
