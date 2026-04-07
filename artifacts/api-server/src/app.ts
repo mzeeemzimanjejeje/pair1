@@ -49,18 +49,23 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 app.use("/api", router);
 
 // Serve built React frontend if available (same-process deployment on Vercel/Render)
-// Check both layouts:
-//   local (esbuild):  dist/ → __dirname = .../dist/, public/ is sibling
-//   Vercel (ncc):     /var/task/ → __dirname = /var/task/, dist/public/ is included via includeFiles
 const frontendDist = [
-  path.join(__dirname, "public"),
-  path.join(__dirname, "dist", "public"),
+  path.join(__dirname, "public"),                                         // esbuild: dist/__dirname, public/ sibling
+  path.join(__dirname, "dist", "public"),                                 // Vercel ncc: /var/task/dist/public
+  path.join(process.cwd(), "artifacts/api-server/dist/public"),          // Render: repo root CWD
+  path.join(process.cwd(), "dist/public"),                               // generic fallback
 ].find((p) => fs.existsSync(p));
+logger.info({ frontendDist: frontendDist ?? "not found" }, "Frontend dist path");
 if (frontendDist) {
   app.use(express.static(frontendDist));
   // SPA fallback — return index.html for any non-API route
   app.get(/^(?!\/api).*/, (_req: Request, res: Response) => {
     res.sendFile(path.join(frontendDist, "index.html"));
+  });
+} else {
+  // Frontend not built yet — serve a minimal status page so GET / never returns "Cannot GET /"
+  app.get("/", (_req: Request, res: Response) => {
+    res.status(200).send(`<!DOCTYPE html><html><body><h2>TRUTH-MD Pairing API is running.</h2><p>Frontend not found. Check build logs.</p><p>API: <a href="/api/health">/api/health</a></p></body></html>`);
   });
 }
 

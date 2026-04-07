@@ -2,7 +2,7 @@ services:
   - type: web
     name: truth-md-pair
     runtime: node
-    buildCommand: npm install -g pnpm@10 && pnpm install --frozen-lockfile && pnpm --filter @workspace/pairing-site run build && pnpm --filter @workspace/api-server run build && cp -r artifacts/pairing-site/dist/public artifacts/api-server/dist/public
+    buildCommand: npm install -g pnpm@10 && pnpm install --no-frozen-lockfile --ignore-scripts && pnpm --filter @workspace/pairing-site run build && pnpm --filter @workspace/api-server run build && cp -r artifacts/pairing-site/dist/public artifacts/api-server/dist/public
     startCommand: node --enable-source-maps artifacts/api-server/dist/index.mjs
     envVars:
       - key: NODE_ENV
