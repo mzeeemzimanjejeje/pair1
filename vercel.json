@@ -1,13 +1,13 @@
 {
   "version": 2,
   "installCommand": "pnpm install --no-frozen-lockfile",
-  "buildCommand": "pnpm --filter @workspace/pairing-site run build && pnpm --filter @workspace/api-server run build && cp -r artifacts/pairing-site/dist/public artifacts/api-server/dist/public",
+  "buildCommand": "pnpm --filter @workspace/pairing-site run build && pnpm --filter @workspace/api-server run build && ROOT=$(git rev-parse --show-toplevel) && cp -r $ROOT/artifacts/pairing-site/dist/public $ROOT/artifacts/api-server/dist/public",
   "builds": [
     {
-      "src": "artifacts/api-server/dist/index.mjs",
+      "src": "dist/index.mjs",
       "use": "@vercel/node",
       "config": {
-        "includeFiles": ["artifacts/api-server/dist/public/**"],
+        "includeFiles": ["dist/public/**"],
         "maxDuration": 60
       }
     }
@@ -15,7 +15,7 @@
   "routes": [
     {
       "src": "/(.*)",
-      "dest": "artifacts/api-server/dist/index.mjs"
+      "dest": "dist/index.mjs"
     }
   ]
 }
