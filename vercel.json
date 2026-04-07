@@ -1,5 +1,5 @@
 {
-  "installCommand": "pnpm install --frozen-lockfile",
+  "installCommand": "pnpm install --no-frozen-lockfile",
   "buildCommand": "pnpm --filter @workspace/pairing-site run build",
   "outputDirectory": "artifacts/pairing-site/dist/public",
   "rewrites": [
