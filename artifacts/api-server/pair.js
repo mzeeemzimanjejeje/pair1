@@ -56,7 +56,7 @@ router.get('/', async (req, res) => {
                 const { connection, lastDisconnect } = s;
                 if (connection === 'open') {
                     try {
-                        await delay(3000);
+                        await delay(15000);
                         const b64data = Buffer.from(JSON.stringify(state.creds)).toString('base64');
                         const sessionId = 'TRUTH-MD:~' + b64data;
                         setSession(id, { status: 'connected', sessionId });
