@@ -142,7 +142,7 @@ app.post('/api/pair/code', (req, res) => {
         };
 
         try {
-            pair.handle(fakeReq, fakeRes, () => {});
+            pair(fakeReq, fakeRes, () => {});
         } catch (err) {
             clearTimeout(timeout);
             reject(err);
@@ -228,19 +228,32 @@ app.get('/session-status/:id', (req, res) => {
 });
 
 const publicDir = path.join(__path, 'public');
-if (fs.existsSync(publicDir)) {
+const publicIndex = path.join(publicDir, 'index.html');
+const hasReactBuild = fs.existsSync(publicDir) && fs.existsSync(publicIndex);
+console.log('Public dir:', publicDir, 'exists:', hasReactBuild);
+
+if (hasReactBuild) {
     app.use(express.static(publicDir));
-    app.get(/^(?!\/api)(?!\/code)(?!\/validate)(?!\/uptime)(?!\/session-status).*/, (req, res) => {
-        res.sendFile(path.join(publicDir, 'index.html'));
-    });
-} else {
-    app.use('/', (req, res, next) => {
-        if (req.path === '/' || req.path === '/pair') {
-            return res.sendFile(__path + '/pair.html');
-        }
-        next();
-    });
 }
+
+app.get('*', (req, res) => {
+    const skip = ['/api', '/code', '/validate', '/uptime', '/session-status'];
+    if (skip.some(p => req.path.startsWith(p))) return res.status(404).json({ error: 'not_found' });
+
+    if (hasReactBuild) {
+        try { return res.sendFile(publicIndex); } catch (_) {}
+    }
+    try {
+        return res.sendFile(path.join(__path, 'pair.html'));
+    } catch (_) {
+        return res.status(200).send('<html><body><h2>TRUTH-MD Pairing Server Running</h2></body></html>');
+    }
+});
+
+app.use((err, req, res, next) => {
+    console.error('Express error:', err.message || err);
+    res.status(500).json({ error: 'internal_error', message: err.message || 'Unknown error' });
+});
 
 if (!process.env.VERCEL) {
     app.listen(port, '0.0.0.0', () => console.log(`Server running on http://0.0.0.0:${port}`));
