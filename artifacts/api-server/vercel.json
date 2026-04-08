@@ -4,12 +4,11 @@
   "outputDirectory": "public",
   "functions": {
     "api/index.js": {
-      "maxDuration": 60,
-      "includeFiles": "../{index.js,pair.js,store.js,id.js,pair.html,validate.html}"
+      "maxDuration": 60
     }
   },
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api" },
+    { "source": "/api/(.*)", "destination": "/api/index.js" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }

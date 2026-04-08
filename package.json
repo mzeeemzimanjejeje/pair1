@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "license": "MIT",
   "scripts": {
-    "preinstall": "sh -c 'rm -f package-lock.json yarn.lock; if [ -n \"$DYNO\" ] || [ -n \"$HEROKU\" ]; then exit 0; fi; case \"$npm_config_user_agent\" in pnpm/*) ;; *) echo \"Use pnpm instead\" >&2; exit 1 ;; esac'",
+    "preinstall": "sh -c 'rm -f package-lock.json yarn.lock; if [ -n \"$DYNO\" ] || [ -n \"$STACK\" ] || [ -n \"$SOURCE_VERSION\" ] || [ -n \"$HEROKU\" ] || [ -n \"$CI\" ] || [ -n \"$VERCEL\" ]; then exit 0; fi; case \"$npm_config_user_agent\" in pnpm/*) ;; *) echo \"Use pnpm instead\" >&2; exit 1 ;; esac'",
     "build": "cd artifacts/api-server && npm install --legacy-peer-deps",
     "heroku-postbuild": "cd artifacts/api-server && npm install --legacy-peer-deps",
     "typecheck:libs": "tsc --build",
