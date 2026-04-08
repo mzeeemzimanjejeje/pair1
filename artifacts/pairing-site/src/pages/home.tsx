@@ -121,14 +121,25 @@ export function Home() {
   }, [status?.lastError]);
 
   function notifyCodeReady(code: string) {
-    if ('Notification' in window && Notification.permission === 'granted') {
-      new Notification('TRUTH-MD Pairing Code Ready', {
-        body: `Your code: ${code}\nOpen WhatsApp → Linked Devices → Link with phone number`,
-        icon: '/favicon.svg',
-      });
-    } else if ('Notification' in window && Notification.permission === 'default') {
-      Notification.requestPermission();
-    }
+    try {
+      if ('Notification' in window && Notification.permission === 'granted') {
+        if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+          navigator.serviceWorker.ready.then(reg => {
+            reg.showNotification('TRUTH-MD Pairing Code Ready', {
+              body: `Your code: ${code}\nOpen WhatsApp → Linked Devices → Link with phone number`,
+              icon: '/favicon.svg',
+            });
+          });
+        } else {
+          new Notification('TRUTH-MD Pairing Code Ready', {
+            body: `Your code: ${code}\nOpen WhatsApp → Linked Devices → Link with phone number`,
+            icon: '/favicon.svg',
+          });
+        }
+      } else if ('Notification' in window && Notification.permission === 'default') {
+        Notification.requestPermission();
+      }
+    } catch (_) {}
 
     document.title = `🔑 Code: ${code} — TRUTH-MD`;
     setTimeout(() => { document.title = 'TRUTH-MD Pairing'; }, 30000);
