@@ -10,14 +10,6 @@
   },
   "private": true,
   "packageManager": "pnpm@10.26.1",
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "@whiskeysockets/baileys",
-      "protobufjs",
-      "bufferutil",
-      "utf-8-validate"
-    ]
-  },
   "devDependencies": {
     "typescript": "~5.9.2",
     "prettier": "^3.8.1"
