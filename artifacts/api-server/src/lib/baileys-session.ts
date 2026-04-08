@@ -310,7 +310,7 @@ class BaileysSession extends EventEmitter {
                 // (which IS the linked device) can decrypt immediately — the
                 // phone cannot until key exchange completes (~5-8 seconds).
                 logger.info({ phone }, "Waiting for key exchange before sending…");
-                await delay(15000);
+                await delay(8000);
 
                 const sentSession = await sock.sendMessage(jid, { text: sessionId });
                 const msg = `╔════════════════════\n║ 🟢 SESSION CONNECTED\n║ ✓ BOT: TRUTH-MD\n║ ✓ TYPE: BASE64\n║ ✓ PREFIX: TRUTH-MD:~\n║ ✓ SUPPORT: t.me/TruthMD\n╚════════════════════`;
