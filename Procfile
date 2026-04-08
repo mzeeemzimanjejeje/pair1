@@ -1,1 +1,1 @@
-web: node artifacts/api-server/index.js
+web: cd artifacts/api-server && node index.js
