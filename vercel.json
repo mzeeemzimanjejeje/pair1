@@ -3,6 +3,12 @@
   "installCommand": "pnpm install --no-frozen-lockfile --ignore-scripts=false",
   "buildCommand": "pnpm --filter @workspace/pairing-site run build",
   "outputDirectory": "artifacts/pairing-site/dist/public",
+  "functions": {
+    "api/index.js": {
+      "maxDuration": 60,
+      "includeFiles": "artifacts/api-server/**"
+    }
+  },
   "rewrites": [
     { "source": "/api(.*)", "destination": "/api/index" },
     { "source": "/((?!assets|favicon|opengraph).*)", "destination": "/index.html" }
