@@ -190,14 +190,27 @@ export function Home() {
   }
 
   function copyText(text: string, setCopiedFn: (v: boolean) => void) {
-    navigator.clipboard.writeText(text).catch(() => {
-      const ta = document.createElement('textarea');
-      ta.value = text;
-      document.body.appendChild(ta);
-      ta.select();
-      document.execCommand('copy');
-      document.body.removeChild(ta);
-    });
+    const rawText = text.replace(/-/g, '');
+    const fallback = () => {
+      try {
+        const ta = document.createElement('textarea');
+        ta.value = rawText;
+        ta.style.position = 'fixed';
+        ta.style.left = '-9999px';
+        ta.style.top = '-9999px';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+      } catch (_) {}
+    };
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(rawText).catch(fallback);
+    } else {
+      fallback();
+    }
     setCopiedFn(true);
     setTimeout(() => setCopiedFn(false), 2000);
   }
