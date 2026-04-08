@@ -5,8 +5,16 @@ const app = express();
 const __path = __dirname;
 const bodyParser = require('body-parser');
 const port = process.env.PORT || 5000;
+
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
+
+const pairHtml = fs.readFileSync(path.join(__path, 'pair.html'), 'utf8');
+const validateHtml = fs.readFileSync(path.join(__path, 'validate.html'), 'utf8');
+
 const code = require('./pair');
 const { getSession } = require('./store');
+
 require('events').EventEmitter.defaultMaxListeners = 500;
 
 const timestampFile = path.join(process.env.VERCEL ? '/tmp' : __path, '.creation_time');
@@ -18,13 +26,11 @@ if (fs.existsSync(timestampFile)) {
     try { fs.writeFileSync(timestampFile, String(creationTime)); } catch (_) {}
 }
 
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
-
 app.use('/code', code);
 
 app.get('/validate', (req, res) => {
-    res.sendFile(path.join(__path, 'validate.html'));
+    res.setHeader('Content-Type', 'text/html');
+    res.send(validateHtml);
 });
 
 app.post('/validate-session', (req, res) => {
@@ -55,7 +61,8 @@ app.post('/validate-session', (req, res) => {
 
 app.use('/', (req, res, next) => {
     if (req.path === '/' || req.path === '/pair') {
-        return res.sendFile(path.join(__path, 'pair.html'));
+        res.setHeader('Content-Type', 'text/html');
+        return res.send(pairHtml);
     }
     next();
 });
@@ -73,6 +80,11 @@ app.get('/session-status/:id', (req, res) => {
     const result = getSession(req.params.id);
     if (!result) return res.json({ status: 'not_found' });
     res.json(result);
+});
+
+app.use((err, req, res, next) => {
+    console.error('Express error:', err);
+    res.status(500).json({ error: 'Internal server error', message: err.message });
 });
 
 if (!process.env.VERCEL) {
