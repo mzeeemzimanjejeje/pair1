@@ -1,0 +1,22 @@
+{
+  "name": "TRUTH-MD Pairing",
+  "description": "TRUTH-MD WhatsApp Session Pairing Server",
+  "keywords": ["whatsapp", "pairing", "truth-md", "bot"],
+  "stack": "heroku-24",
+  "buildpacks": [
+    {
+      "url": "heroku/nodejs"
+    }
+  ],
+  "formation": {
+    "web": {
+      "quantity": 1,
+      "size": "eco"
+    }
+  },
+  "env": {
+    "NODE_ENV": {
+      "value": "production"
+    }
+  }
+}
