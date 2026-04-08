@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>TRUTH-MD | Pair Your WhatsApp</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&display=swap" rel="stylesheet"/>
+  <style>
+    :root{--primary:#7a9cc6;--accent:#5b7a99;--light:#d4dce6;--glass-bg:rgba(30,40,60,0.6);--glass-border:rgba(140,160,190,0.25)}
+    *{margin:0;padding:0;box-sizing:border-box;font-family:'Poppins',sans-serif}
+    body{background:linear-gradient(180deg,#0d1117 0%,#1a1e2e 40%,#2c3345 100%);color:var(--light);min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2rem}
+    .card{background:var(--glass-bg);border:1px solid var(--glass-border);backdrop-filter:blur(16px);border-radius:20px;padding:2.5rem;width:100%;max-width:480px;box-shadow:0 8px 32px rgba(0,0,0,0.5)}
+    .logo{text-align:center;margin-bottom:1.5rem}
+    .logo h1{font-size:2rem;font-weight:700;background:linear-gradient(to right,var(--primary),var(--accent));-webkit-background-clip:text;background-clip:text;color:transparent}
+    .logo p{font-size:.85rem;color:rgba(212,220,230,.6);margin-top:.25rem}
+    label{display:block;font-size:.85rem;margin-bottom:.5rem}
+    .input-row{display:flex;gap:.5rem;margin-bottom:1rem}
+    .input-row input{flex:1;background:rgba(255,255,255,.07);border:1px solid var(--glass-border);border-radius:10px;padding:.75rem 1rem;color:var(--light);font-size:1rem;outline:none}
+    .input-row input:focus{border-color:var(--accent)}
+    .input-row input::placeholder{color:rgba(212,220,230,.35)}
+    .btn{background:linear-gradient(135deg,var(--primary),var(--accent));border:none;border-radius:10px;padding:.75rem;color:#fff;font-weight:600;cursor:pointer;font-size:.95rem;width:100%;transition:opacity .2s}
+    .btn:hover{opacity:.9}.btn:disabled{opacity:.5;cursor:not-allowed}
+    .code-box{display:none;text-align:center;margin-top:1.5rem;padding:1.5rem;background:rgba(0,0,0,.3);border-radius:12px;border:1px solid var(--glass-border)}
+    .code-box p{font-size:.8rem;color:rgba(212,220,230,.6);margin-bottom:.75rem}
+    .code-display{font-size:2rem;font-weight:700;letter-spacing:4px;color:var(--primary);font-family:monospace}
+    .status-msg{text-align:center;margin-top:1rem;font-size:.85rem;padding:.75rem;border-radius:8px;display:none}
+    .status-msg.info{background:rgba(91,122,153,.2);color:var(--primary)}
+    .status-msg.success{background:rgba(40,167,69,.2);color:#5cb85c}
+    .status-msg.error{background:rgba(220,53,69,.2);color:#e05c6a}
+    .session-box{display:none;margin-top:1rem;padding:1rem;background:rgba(0,0,0,.3);border-radius:10px;border:1px solid rgba(92,184,92,.3)}
+    .session-box p{font-size:.75rem;color:rgba(212,220,230,.6);margin-bottom:.5rem}
+    .session-box textarea{width:100%;background:transparent;border:none;color:var(--light);font-size:.7rem;resize:none;height:80px;outline:none;font-family:monospace}
+    .copy-btn{background:rgba(91,122,153,.3);border:1px solid var(--glass-border);border-radius:6px;padding:.4rem 1rem;color:var(--light);cursor:pointer;font-size:.8rem;margin-top:.5rem}
+    .spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;margin-right:6px;vertical-align:middle}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .steps{margin-top:1.5rem;font-size:.8rem;color:rgba(212,220,230,.55)}
+    .steps ol{padding-left:1.2rem;line-height:2}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">
+      <h1><i class="fab fa-whatsapp"></i> TRUTH-MD</h1>
+      <p>WhatsApp Session Pairing</p>
+    </div>
+    <label>Phone Number (with country code)</label>
+    <div class="input-row">
+      <input type="tel" id="phoneInput" placeholder="e.g. 2547xxxxxxxx"/>
+    </div>
+    <button class="btn" id="pairBtn" onclick="startPairing()"><i class="fas fa-link"></i> Get Pairing Code</button>
+    <div class="code-box" id="codeBox">
+      <p>Enter this code in WhatsApp → Linked Devices → Link with phone number</p>
+      <div class="code-display" id="codeDisplay">----</div>
+    </div>
+    <div class="status-msg" id="statusMsg"></div>
+    <div class="session-box" id="sessionBox">
+      <p>Your Session ID (copy and save this):</p>
+      <textarea id="sessionText" readonly></textarea>
+      <button class="copy-btn" onclick="copySession()"><i class="fas fa-copy"></i> Copy Session ID</button>
+    </div>
+    <div class="steps">
+      <ol>
+        <li>Enter your WhatsApp number with country code</li>
+        <li>Click "Get Pairing Code"</li>
+        <li>Open WhatsApp → Linked Devices → Link with phone number</li>
+        <li>Enter the 8-digit code shown above</li>
+        <li>Your session ID will appear automatically</li>
+      </ol>
+    </div>
+  </div>
+  <script>
+    let evtSource=null;
+    function showStatus(msg,type){const el=document.getElementById('statusMsg');el.textContent=msg;el.className='status-msg '+type;el.style.display='block'}
+    function startPairing(){
+      const num=document.getElementById('phoneInput').value.replace(/[^0-9]/g,'');
+      if(!num||num.length<7){showStatus('Please enter a valid phone number.','error');return}
+      const btn=document.getElementById('pairBtn');
+      btn.disabled=true;btn.innerHTML='<span class="spinner"></span>Connecting...';
+      document.getElementById('codeBox').style.display='none';
+      document.getElementById('sessionBox').style.display='none';
+      showStatus('Connecting to WhatsApp...','info');
+      if(evtSource)evtSource.close();
+      evtSource=new EventSource('/code?number='+encodeURIComponent(num));
+      evtSource.addEventListener('code',(e)=>{
+        const{code}=JSON.parse(e.data);
+        document.getElementById('codeDisplay').textContent=code;
+        document.getElementById('codeBox').style.display='block';
+        showStatus('Code ready — enter it in WhatsApp now.','info');
+        btn.innerHTML='<span class="spinner"></span>Waiting for scan...';
+      });
+      evtSource.addEventListener('session',(e)=>{
+        const{sessionId}=JSON.parse(e.data);
+        document.getElementById('sessionText').value=sessionId;
+        document.getElementById('sessionBox').style.display='block';
+        showStatus('Session connected! Copy your Session ID above.','success');
+        btn.disabled=false;btn.innerHTML='<i class="fas fa-link"></i> Get Pairing Code';
+        evtSource.close();
+      });
+      evtSource.addEventListener('error',(e)=>{
+        try{const{message}=JSON.parse(e.data);showStatus('Error: '+message,'error')}
+        catch{showStatus('Connection error. Please try again.','error')}
+        btn.disabled=false;btn.innerHTML='<i class="fas fa-link"></i> Get Pairing Code';
+        evtSource.close();
+      });
+      evtSource.onerror=()=>{showStatus('Connection lost. Please try again.','error');btn.disabled=false;btn.innerHTML='<i class="fas fa-link"></i> Get Pairing Code';evtSource.close()};
+    }
+    function copySession(){
+      navigator.clipboard.writeText(document.getElementById('sessionText').value).then(()=>{
+        const btn=document.querySelector('.copy-btn');
+        btn.innerHTML='<i class="fas fa-check"></i> Copied!';
+        setTimeout(()=>{btn.innerHTML='<i class="fas fa-copy"></i> Copy Session ID'},2000);
+      });
+    }
+  </script>
+</body>
+</html>

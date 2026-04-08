@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>TRUTH-MD | Session Validator</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&display=swap" rel="stylesheet"/>
+  <script src="https://unpkg.com/sweetalert/dist/sweetalert.min.js"></script>
+  <style>
+    :root{--primary:#7a9cc6;--accent:#5b7a99;--light:#d4dce6;--glass-bg:rgba(30,40,60,0.6);--glass-border:rgba(140,160,190,0.25)}
+    *{margin:0;padding:0;box-sizing:border-box;font-family:'Poppins',sans-serif}
+    body{background:linear-gradient(180deg,#0d1117 0%,#1a1e2e 40%,#2c3345 100%);color:var(--light);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:2rem}
+    .card{background:var(--glass-bg);border:1px solid var(--glass-border);backdrop-filter:blur(16px);border-radius:20px;padding:2.5rem;width:100%;max-width:520px;box-shadow:0 8px 32px rgba(0,0,0,0.5)}
+    h2{font-size:1.6rem;margin-bottom:.5rem;background:linear-gradient(to right,var(--primary),var(--accent));-webkit-background-clip:text;background-clip:text;color:transparent}
+    p.sub{font-size:.85rem;color:rgba(212,220,230,.6);margin-bottom:1.5rem}
+    label{display:block;font-size:.85rem;margin-bottom:.5rem}
+    textarea{width:100%;background:rgba(255,255,255,.07);border:1px solid var(--glass-border);border-radius:10px;padding:.75rem;color:var(--light);font-size:.85rem;height:120px;resize:vertical;outline:none;font-family:monospace}
+    textarea:focus{border-color:var(--accent)}
+    .btn{background:linear-gradient(135deg,var(--primary),var(--accent));border:none;border-radius:10px;padding:.75rem;color:#fff;font-weight:600;cursor:pointer;font-size:.95rem;width:100%;margin-top:1rem;transition:opacity .2s}
+    .btn:hover{opacity:.9}.btn:disabled{opacity:.5;cursor:not-allowed}
+    .result{display:none;margin-top:1.25rem;padding:1rem;border-radius:10px}
+    .result.valid{background:rgba(40,167,69,.15);border:1px solid rgba(92,184,92,.4)}
+    .result.invalid{background:rgba(220,53,69,.15);border:1px solid rgba(220,53,69,.4)}
+    .result h3{font-size:1rem;margin-bottom:.75rem}
+    .row{display:flex;justify-content:space-between;font-size:.82rem;padding:.3rem 0;border-bottom:1px solid rgba(255,255,255,.05)}
+    .ok{color:#5cb85c}.bad{color:#e05c6a}.val{color:var(--primary)}
+    .back{display:block;text-align:center;margin-top:1.25rem;color:var(--primary);text-decoration:none;font-size:.85rem}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2><i class="fas fa-shield-alt"></i> Session Validator</h2>
+    <p class="sub">Paste your TRUTH-MD session ID to validate it</p>
+    <label>Session ID</label>
+    <textarea id="sessionInput" placeholder="TRUTH-MD:~..."></textarea>
+    <button class="btn" id="validateBtn" onclick="validate()"><i class="fas fa-check-circle"></i> Validate Session</button>
+    <div class="result" id="result">
+      <h3 id="resultHeader"></h3>
+      <div id="resultDetails"></div>
+    </div>
+    <a class="back" href="/"><i class="fas fa-arrow-left"></i> Back to Pairing</a>
+  </div>
+  <script>
+    async function validate(){
+      const raw=document.getElementById('sessionInput').value.trim();
+      if(!raw){swal('Error','Please paste your session ID.','error');return}
+      const btn=document.getElementById('validateBtn');
+      btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Validating...';
+      try{
+        const resp=await fetch('/validate-session',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:raw})});
+        const data=await resp.json();
+        const box=document.getElementById('result');
+        box.style.display='block';
+        if(data.valid){
+          box.className='result valid';
+          document.getElementById('resultHeader').innerHTML='<i class="fas fa-check-circle" style="color:#5cb85c"></i> Valid Session ID';
+          document.getElementById('resultDetails').innerHTML=`<div class="row"><span>Status</span><span class="ok">Valid</span></div><div class="row"><span>Prefix</span><span class="val">${data.prefix}</span></div><div class="row"><span>Phone ID</span><span class="${data.hasPhoneId?'ok':'bad'}">${data.hasPhoneId?'Present':'Missing'}</span></div><div class="row"><span>Auth Keys</span><span class="${data.hasKeys?'ok':'bad'}">${data.hasKeys?'Present':'Missing'}</span></div><div class="row"><span>Data Size</span><span class="val">${data.dataSize}</span></div>`;
+          swal('Valid!','Session ID is properly formatted.','success');
+        }else{
+          box.className='result invalid';
+          document.getElementById('resultHeader').innerHTML='<i class="fas fa-times-circle" style="color:#e05c6a"></i> Invalid Session ID';
+          document.getElementById('resultDetails').innerHTML=`<div class="row"><span>Status</span><span class="bad">Invalid</span></div><div class="row"><span>Reason</span><span class="bad">${data.error}</span></div>`;
+          swal('Invalid',data.error,'error');
+        }
+      }catch(e){swal('Error','Server error. Please try again.','error')}
+      btn.disabled=false;btn.innerHTML='<i class="fas fa-check-circle"></i> Validate Session';
+    }
+  </script>
+</body>
+</html>
