@@ -1,1 +1,1 @@
-web: node --enable-source-maps artifacts/api-server/dist/index.mjs
+web: node artifacts/api-server/index.js
