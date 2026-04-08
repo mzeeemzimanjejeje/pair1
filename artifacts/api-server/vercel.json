@@ -4,7 +4,8 @@
   "outputDirectory": "public",
   "functions": {
     "api/index.js": {
-      "maxDuration": 60
+      "maxDuration": 60,
+      "includeFiles": "../{index.js,pair.js,store.js,id.js,pair.html,validate.html}"
     }
   },
   "rewrites": [
