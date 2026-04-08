@@ -331,8 +331,8 @@ export function Home() {
             {/* Live status badge */}
             <StatusBadge phase={phase} error={errorMsg} />
 
-            {/* ── Idle / error / expired / connected → show form ── */}
-            {(phase === 'idle' || phase === 'error' || phase === 'expired' || phase === 'connected') && (
+            {/* ── Phone input + submit (visible in all phases except generating) ── */}
+            {phase !== 'generating' && (
               <form onSubmit={handleSubmit} style={{ marginTop: 16 }}>
                 <div className="cx-input-field">
                   <input
@@ -349,7 +349,7 @@ export function Home() {
                   {phoneError && <div className="cx-error">{phoneError}</div>}
                 </div>
                 <button type="submit" className="cx-btn">
-                  {phase === 'connected' ? 'Get New Code' : phase === 'expired' ? 'Get Fresh Code' : 'Generate Pair Code'}
+                  {phase === 'code_ready' || phase === 'waiting_confirm' ? 'Generate New Code' : phase === 'connected' ? 'Get New Code' : phase === 'expired' ? 'Get Fresh Code' : 'Generate Pair Code'}
                 </button>
               </form>
             )}
@@ -395,24 +395,6 @@ export function Home() {
                     }
                   </button>
 
-                  <div className="cx-instructions">
-                    <div className="cx-step">
-                      <span className="cx-step-num">1</span>
-                      Open <b>WhatsApp</b> → <b>Linked Devices</b> → <b>Link a Device</b>
-                    </div>
-                    <div className="cx-step">
-                      <span className="cx-step-num">2</span>
-                      Tap <b>"Link with phone number instead"</b>
-                    </div>
-                    <div className="cx-step">
-                      <span className="cx-step-num">3</span>
-                      Enter the code above — session string will arrive on your WhatsApp
-                    </div>
-                  </div>
-
-                  <button className="cx-retry-btn" onClick={handleReset}>
-                    <i className="fas fa-redo" style={{ marginRight: 6 }} />Use different number
-                  </button>
                 </div>
               )}
 
