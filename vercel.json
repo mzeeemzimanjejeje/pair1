@@ -1,19 +1,10 @@
 {
   "version": 2,
-  "builds": [
-    {
-      "src": "src/app.ts",
-      "use": "@vercel/node",
-      "config": {
-        "includeFiles": ["dist/public/**"],
-        "maxDuration": 60
-      }
-    }
-  ],
-  "routes": [
-    {
-      "src": "/(.*)",
-      "dest": "src/app.ts"
-    }
+  "installCommand": "pnpm install --no-frozen-lockfile",
+  "buildCommand": "pnpm --filter @workspace/pairing-site run build && mkdir -p public && cp -r ../pairing-site/dist/public/. ./public/",
+  "outputDirectory": "public",
+  "rewrites": [
+    { "source": "/api(.*)", "destination": "/api/index" },
+    { "source": "/((?!assets|favicon|opengraph).*)", "destination": "/index.html" }
   ]
 }
