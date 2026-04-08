@@ -1,8 +1,8 @@
 {
   "version": 2,
   "installCommand": "pnpm install --no-frozen-lockfile --ignore-scripts=false",
-  "buildCommand": "set -ex && pnpm --filter @workspace/pairing-site run build && echo \"--- Vite done, checking output ---\" && ls -la artifacts/pairing-site/dist/public || (echo \"ERROR: artifacts/pairing-site/dist/public not found\" && exit 1) && mkdir -p public && cp -r artifacts/pairing-site/dist/public/. public/ && echo \"--- Copy done ---\" && ls -la public/",
-  "outputDirectory": "public",
+  "buildCommand": "pnpm --filter @workspace/pairing-site run build",
+  "outputDirectory": "artifacts/pairing-site/dist/public",
   "rewrites": [
     { "source": "/api(.*)", "destination": "/api/index" },
     { "source": "/((?!assets|favicon|opengraph).*)", "destination": "/index.html" }
