@@ -17,13 +17,144 @@ if (fs.existsSync(timestampFile)) {
     try { fs.writeFileSync(timestampFile, String(creationTime)); } catch (_) {}
 }
 
+let visitors = new Set();
+let requestCount = 0;
+let successCount = 0;
+let failedCount = 0;
+
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-let pairRouter = null;
+app.use((req, res, next) => {
+    const ip = (req.headers['x-forwarded-for'] || '').split(',')[0].trim() || req.socket.remoteAddress || 'unknown';
+    visitors.add(ip);
+    requestCount++;
+    res.on('finish', () => {
+        if (res.statusCode >= 200 && res.statusCode < 400) successCount++;
+        else failedCount++;
+    });
+    next();
+});
+
+let pairModule = null;
+let activePairingState = {
+    connected: false,
+    phone: null,
+    state: 'idle',
+    pairingCode: null,
+    codeIssuedAt: null,
+    lastError: null,
+    sessionId: null
+};
+
+function getPairModule() {
+    if (!pairModule) pairModule = require('./pair');
+    return pairModule;
+}
+
+app.get('/api/stats', (req, res) => {
+    const uptimeMs = Date.now() - creationTime;
+    const uptimeSeconds = Math.floor(uptimeMs / 1000);
+    res.json({
+        uptimeSeconds,
+        visitors: visitors.size,
+        requests: requestCount,
+        success: successCount,
+        failed: failedCount
+    });
+});
+
+app.get('/api/pair/status', (req, res) => {
+    res.json(activePairingState);
+});
+
+app.post('/api/pair/code', (req, res) => {
+    const { phoneNumber } = req.body || {};
+    if (!phoneNumber) return res.status(400).json({ error: 'invalid_request', message: 'Phone number required' });
+
+    const cleanPhone = String(phoneNumber).replace(/\D/g, '');
+    if (!cleanPhone || cleanPhone.length < 7) {
+        return res.status(400).json({ error: 'invalid_phone', message: 'Phone number must include country code (e.g. 254712345678)' });
+    }
+
+    activePairingState = {
+        connected: false,
+        phone: cleanPhone,
+        state: 'generating',
+        pairingCode: null,
+        codeIssuedAt: null,
+        lastError: null,
+        sessionId: null
+    };
+
+    const pair = getPairModule();
+    const fakeRes = {
+        writeHead: () => {},
+        write: (data) => {
+            try {
+                const lines = data.split('\n');
+                for (const line of lines) {
+                    if (line.startsWith('data: ')) {
+                        const parsed = JSON.parse(line.slice(6));
+                        if (parsed.code) {
+                            activePairingState.pairingCode = parsed.code;
+                            activePairingState.codeIssuedAt = Date.now();
+                            activePairingState.state = 'code_ready';
+                        }
+                        if (parsed.sessionId) {
+                            activePairingState.sessionId = parsed.sessionId;
+                            activePairingState.connected = true;
+                            activePairingState.state = 'connected';
+                        }
+                    }
+                    if (line.startsWith('event: error')) {
+                        activePairingState.state = 'error';
+                    }
+                }
+            } catch (_) {}
+        },
+        end: () => {},
+        on: () => {},
+        flush: () => {}
+    };
+    fakeRes.writeHead(200, {});
+
+    const fakeReq = { query: { number: cleanPhone }, headers: req.headers, socket: req.socket };
+    try {
+        pair(fakeReq, fakeRes, () => {});
+    } catch (err) {
+        activePairingState.lastError = err.message;
+        activePairingState.state = 'error';
+    }
+
+    setTimeout(() => {
+        if (activePairingState.pairingCode) {
+            return res.json({ code: activePairingState.pairingCode, phoneNumber: cleanPhone });
+        }
+        res.json({ code: 'PENDING', phoneNumber: cleanPhone, message: 'Code being generated, poll /api/pair/status' });
+    }, 8000);
+});
+
+app.post('/api/pair/reset', (req, res) => {
+    activePairingState = {
+        connected: false, phone: null, state: 'idle',
+        pairingCode: null, codeIssuedAt: null, lastError: null, sessionId: null
+    };
+    res.json({ message: 'Session reset' });
+});
+
+app.post('/api/pair/entered', (req, res) => {
+    activePairingState.state = 'waiting_confirm';
+    res.json({ message: 'Waiting for WhatsApp confirmation' });
+});
+
+app.get('/api/health', (req, res) => {
+    res.json({ status: 'ok' });
+});
+
 app.use('/code', (req, res, next) => {
-    if (!pairRouter) pairRouter = require('./pair');
-    pairRouter(req, res, next);
+    const pair = getPairModule();
+    pair(req, res, next);
 });
 
 app.get('/validate', (req, res) => {
@@ -56,13 +187,6 @@ app.post('/validate-session', (req, res) => {
     }
 });
 
-app.use('/', async (req, res, next) => {
-    if (req.path === '/' || req.path === '/pair') {
-        return res.sendFile(__path + '/pair.html');
-    }
-    next();
-});
-
 app.get('/uptime', (req, res) => {
     const uptimeMs = Date.now() - creationTime;
     const seconds = Math.floor(uptimeMs / 1000) % 60;
@@ -77,6 +201,21 @@ app.get('/session-status/:id', (req, res) => {
     if (!result) return res.json({ status: 'not_found' });
     res.json(result);
 });
+
+const publicDir = path.join(__path, 'public');
+if (fs.existsSync(publicDir)) {
+    app.use(express.static(publicDir));
+    app.get(/^(?!\/api)(?!\/code)(?!\/validate)(?!\/uptime)(?!\/session-status).*/, (req, res) => {
+        res.sendFile(path.join(publicDir, 'index.html'));
+    });
+} else {
+    app.use('/', (req, res, next) => {
+        if (req.path === '/' || req.path === '/pair') {
+            return res.sendFile(__path + '/pair.html');
+        }
+        next();
+    });
+}
 
 if (!process.env.VERCEL) {
     app.listen(port, '0.0.0.0', () => console.log(`Server running on http://0.0.0.0:${port}`));
