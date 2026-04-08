@@ -5,7 +5,6 @@ const app = express();
 const __path = __dirname;
 const bodyParser = require('body-parser');
 const port = process.env.PORT || 5000;
-const code = require('./pair');
 const { getSession } = require('./store');
 require('events').EventEmitter.defaultMaxListeners = 500;
 
@@ -21,7 +20,11 @@ if (fs.existsSync(timestampFile)) {
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-app.use('/code', code);
+let pairRouter = null;
+app.use('/code', (req, res, next) => {
+    if (!pairRouter) pairRouter = require('./pair');
+    pairRouter(req, res, next);
+});
 
 app.get('/validate', (req, res) => {
     res.sendFile(__path + '/validate.html');
