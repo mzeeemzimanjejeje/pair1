@@ -121,30 +121,6 @@ export function Home() {
   }, [status?.lastError]);
 
   function notifyCodeReady(code: string) {
-    try {
-      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.frequency.value = 880;
-      osc.type = 'sine';
-      gain.gain.value = 0.3;
-      osc.start();
-      osc.stop(ctx.currentTime + 0.15);
-      setTimeout(() => {
-        const osc2 = ctx.createOscillator();
-        const gain2 = ctx.createGain();
-        osc2.connect(gain2);
-        gain2.connect(ctx.destination);
-        osc2.frequency.value = 1200;
-        osc2.type = 'sine';
-        gain2.gain.value = 0.3;
-        osc2.start();
-        osc2.stop(ctx.currentTime + 0.2);
-      }, 180);
-    } catch (_) {}
-
     if ('Notification' in window && Notification.permission === 'granted') {
       new Notification('TRUTH-MD Pairing Code Ready', {
         body: `Your code: ${code}\nOpen WhatsApp → Linked Devices → Link with phone number`,
