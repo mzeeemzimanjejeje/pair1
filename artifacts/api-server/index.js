@@ -134,9 +134,16 @@ app.post('/api/pair/code', (req, res) => {
         };
 
         const fakeReq = {
+            method: 'GET',
+            url: `/?number=${encodeURIComponent(cleanPhone)}`,
+            path: '/',
+            baseUrl: '',
+            originalUrl: `/?number=${encodeURIComponent(cleanPhone)}`,
             query: { number: cleanPhone },
+            params: {},
             headers: req.headers,
             socket: req.socket,
+            connection: req.connection,
             on: () => fakeReq,
             once: () => fakeReq
         };
