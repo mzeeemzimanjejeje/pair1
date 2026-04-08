@@ -389,9 +389,43 @@
       }
     })();
 
-    fetch('/uptime').then(function(r){return r.json()}).then(function(d){
-      document.getElementById('uptimeVal').textContent=d.uptime;
-    }).catch(function(){});
+    var uptimeSeconds = 0;
+    var uptimeTimer = null;
+    function formatUptime(s){
+      var h=Math.floor(s/3600);var m=Math.floor((s%3600)/60);var sec=s%60;
+      if(h>0) return h+'h '+m+'m '+sec+'s';
+      if(m>0) return m+'m '+sec+'s';
+      return sec+'s';
+    }
+    function tickUptime(){
+      uptimeSeconds++;
+      document.getElementById('uptimeVal').textContent=formatUptime(uptimeSeconds);
+    }
+    function fetchStats(){
+      fetch('/api/stats').then(function(r){return r.json()}).then(function(d){
+        if(d.uptimeSeconds!==undefined){
+          uptimeSeconds=d.uptimeSeconds;
+          document.getElementById('uptimeVal').textContent=formatUptime(uptimeSeconds);
+        }
+        if(d.visitors!==undefined) document.getElementById('visitorsVal').textContent=d.visitors;
+        if(d.requests!==undefined) document.getElementById('requestsVal').textContent=d.requests;
+        if(d.success!==undefined) document.getElementById('successVal').textContent=d.success;
+        if(d.failed!==undefined){
+          document.getElementById('failedVal').textContent=d.failed;
+          if(d.failed>0) document.getElementById('failedVal').style.color='#ff3860';
+        }
+      }).catch(function(){
+        fetch('/uptime').then(function(r){return r.json()}).then(function(d){
+          if(d.uptimeMs){
+            uptimeSeconds=Math.floor(d.uptimeMs/1000);
+            document.getElementById('uptimeVal').textContent=formatUptime(uptimeSeconds);
+          }
+        }).catch(function(){});
+      });
+    }
+    fetchStats();
+    setInterval(fetchStats, 5000);
+    uptimeTimer = setInterval(tickUptime, 1000);
 
     var evtSource=null, reqCount=0, successCount=0, failCount=0, countdownTimer=null, countdownVal=0;
 
