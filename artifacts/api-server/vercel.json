@@ -1,8 +1,7 @@
 {
   "version": 2,
-  "installCommand": "cd ../.. && pnpm install --no-frozen-lockfile --ignore-scripts=false",
-  "buildCommand": "cd ../.. && pnpm --filter @workspace/pairing-site run build && mkdir -p artifacts/api-server/dist/public && cp -r artifacts/pairing-site/dist/public/. artifacts/api-server/dist/public/",
-  "outputDirectory": "dist/public",
+  "installCommand": "npm install --legacy-peer-deps",
+  "outputDirectory": "public",
   "functions": {
     "api/index.js": {
       "maxDuration": 60
