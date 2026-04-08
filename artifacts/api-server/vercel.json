@@ -9,7 +9,7 @@
     }
   },
   "rewrites": [
-    { "source": "/api(.*)", "destination": "/api/index" },
-    { "source": "/((?!assets|favicon|opengraph).*)", "destination": "/index.html" }
+    { "source": "/api/(.*)", "destination": "/api" },
+    { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
