@@ -1,0 +1,16 @@
+ WARN  GET https://registry.npmjs.org/wileys error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+ WARN  GET https://registry.npmjs.org/body-parser error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+ WARN  GET https://registry.npmjs.org/express error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+ WARN  GET https://registry.npmjs.org/pino error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+ WARN  GET https://registry.npmjs.org/qrcode error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+ WARN  GET https://registry.npmjs.org/@hookform%2Fresolvers error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+ WARN  GET https://registry.npmjs.org/@radix-ui%2Freact-accordion error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+ WARN  GET https://registry.npmjs.org/@radix-ui%2Freact-alert-dialog error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+ WARN  GET https://registry.npmjs.org/@radix-ui%2Freact-aspect-ratio error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+ WARN  GET https://registry.npmjs.org/@radix-ui%2Freact-avatar error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+ WARN  GET https://registry.npmjs.org/@radix-ui%2Freact-checkbox error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+ WARN  GET https://registry.npmjs.org/@radix-ui%2Freact-collapsible error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+ WARN  GET https://registry.npmjs.org/@radix-ui%2Freact-context-menu error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+ WARN  GET https://registry.npmjs.org/@radix-ui%2Freact-dialog error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+ WARN  GET https://registry.npmjs.org/@radix-ui%2Freact-dropdown-menu error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+ WARN  GET https://registry.npmjs.org/@radix-ui%2Freact-hover-card error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
