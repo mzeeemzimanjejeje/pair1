@@ -3,83 +3,108 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>TRUTH-MD | Pair Your WhatsApp</title>
+  <title>TRUTH-MD | WhatsApp Pairing</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet"/>
   <style>
-    :root{--primary:#7a9cc6;--accent:#5b7a99;--light:#d4dce6;--glass-bg:rgba(30,40,60,0.6);--glass-border:rgba(140,160,190,0.25)}
-    *{margin:0;padding:0;box-sizing:border-box;font-family:'Poppins',sans-serif}
-    body{background:linear-gradient(180deg,#0d1117 0%,#1a1e2e 40%,#2c3345 100%);color:var(--light);min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2rem}
-    .card{background:var(--glass-bg);border:1px solid var(--glass-border);backdrop-filter:blur(16px);border-radius:20px;padding:2.5rem;width:100%;max-width:480px;box-shadow:0 8px 32px rgba(0,0,0,0.5)}
-    .logo{text-align:center;margin-bottom:1.5rem}
-    .logo h1{font-size:2rem;font-weight:700;background:linear-gradient(to right,var(--primary),var(--accent));-webkit-background-clip:text;background-clip:text;color:transparent}
-    .logo p{font-size:.85rem;color:rgba(212,220,230,.6);margin-top:.25rem}
-    label{display:block;font-size:.85rem;margin-bottom:.5rem}
-    .input-row{display:flex;gap:.5rem;margin-bottom:1rem}
-    .input-row input{flex:1;background:rgba(255,255,255,.07);border:1px solid var(--glass-border);border-radius:10px;padding:.75rem 1rem;color:var(--light);font-size:1rem;outline:none}
-    .input-row input:focus{border-color:var(--accent)}
-    .input-row input::placeholder{color:rgba(212,220,230,.35)}
-    .btn{background:linear-gradient(135deg,var(--primary),var(--accent));border:none;border-radius:10px;padding:.75rem;color:#fff;font-weight:600;cursor:pointer;font-size:.95rem;width:100%;transition:opacity .2s}
-    .btn:hover{opacity:.9}.btn:disabled{opacity:.5;cursor:not-allowed}
-    .code-box{display:none;text-align:center;margin-top:1.5rem;padding:1.5rem;background:rgba(0,0,0,.3);border-radius:12px;border:1px solid var(--glass-border)}
-    .code-box p{font-size:.8rem;color:rgba(212,220,230,.6);margin-bottom:.75rem}
-    .code-display{font-size:2rem;font-weight:700;letter-spacing:4px;color:var(--primary);font-family:monospace}
+    :root{--bg:#0a0e1a;--card:#111827;--border:#1e293b;--text:#e2e8f0;--muted:#64748b;--cyan:#06b6d4;--magenta:#d946ef;--green:#22c55e}
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'Space Grotesk',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+    .top-bar{height:4px;background:repeating-linear-gradient(90deg,var(--cyan) 0px,var(--cyan) 8px,transparent 8px,transparent 16px);opacity:.6}
+    .bg-grid{position:fixed;inset:0;background:linear-gradient(135deg,rgba(6,182,212,.03) 0%,transparent 50%,rgba(217,70,239,.03) 100%);pointer-events:none}
+    .container{max-width:960px;margin:0 auto;padding:3rem 1.5rem;display:grid;grid-template-columns:1fr 1fr;gap:2rem;position:relative;z-index:1}
+    @media(max-width:768px){.container{grid-template-columns:1fr;padding:1.5rem 1rem}}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:1.75rem;position:relative;overflow:hidden}
+    .card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(6,182,212,.3),transparent)}
+    .stats-header{display:flex;align-items:center;gap:.75rem;margin-bottom:1.5rem;padding-bottom:1rem;border-bottom:1px solid var(--border)}
+    .stats-icon{width:40px;height:40px;background:linear-gradient(135deg,#6366f1,#8b5cf6);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;color:#fff}
+    .stats-header h2{font-size:1.15rem;font-weight:600}
+    .stat-row{display:flex;justify-content:space-between;align-items:center;padding:.75rem 0;border-bottom:1px solid rgba(30,41,59,.5)}
+    .stat-row:last-child{border-bottom:none}
+    .stat-label{display:flex;align-items:center;gap:.5rem;color:var(--muted);font-size:.9rem}
+    .stat-label i{width:16px;text-align:center}
+    .stat-value{font-family:'JetBrains Mono',monospace;font-weight:600;font-size:.9rem}
+    .stat-value.online{color:var(--cyan)}
+    .stat-value.green{color:var(--green)}
+    .stat-value.zero{color:var(--cyan)}
+    .pair-title{font-family:'JetBrains Mono',monospace;font-size:2rem;font-weight:700;text-align:center;background:linear-gradient(135deg,var(--cyan),var(--magenta));-webkit-background-clip:text;background-clip:text;color:transparent;margin-bottom:.5rem}
+    .pair-sub{text-align:center;color:var(--muted);font-size:.9rem;margin-bottom:1.5rem}
+    .status-badge{display:flex;align-items:center;justify-content:center;gap:.5rem;padding:.5rem 1.25rem;border:1px solid rgba(6,182,212,.3);border-radius:20px;color:var(--cyan);font-size:.85rem;margin:0 auto 1.5rem;width:fit-content;background:rgba(6,182,212,.05)}
+    .status-badge i{font-size:.7rem}
+    .input-wrapper{position:relative;margin-bottom:1rem}
+    .input-wrapper input{width:100%;background:rgba(0,0,0,.4);border:1px solid var(--border);border-radius:12px;padding:1rem 1.25rem;color:var(--text);font-size:1rem;font-family:'Space Grotesk',sans-serif;outline:none;transition:border-color .2s}
+    .input-wrapper input:focus{border-color:var(--cyan)}
+    .input-wrapper input::placeholder{color:var(--muted)}
+    .btn-pair{width:100%;padding:1rem;border:none;border-radius:12px;background:linear-gradient(135deg,var(--cyan),var(--magenta));color:#fff;font-size:1rem;font-weight:600;font-family:'Space Grotesk',sans-serif;cursor:pointer;text-transform:uppercase;letter-spacing:1px;transition:opacity .2s,transform .1s}
+    .btn-pair:hover{opacity:.9;transform:translateY(-1px)}
+    .btn-pair:active{transform:translateY(0)}
+    .btn-pair:disabled{opacity:.5;cursor:not-allowed;transform:none}
+    .code-box{display:none;text-align:center;margin-top:1.5rem;padding:1.25rem;background:rgba(0,0,0,.3);border-radius:12px;border:1px solid var(--border)}
+    .code-box p{font-size:.8rem;color:var(--muted);margin-bottom:.75rem}
+    .code-display{font-family:'JetBrains Mono',monospace;font-size:2.2rem;font-weight:700;letter-spacing:6px;background:linear-gradient(135deg,var(--cyan),var(--magenta));-webkit-background-clip:text;background-clip:text;color:transparent}
     .status-msg{text-align:center;margin-top:1rem;font-size:.85rem;padding:.75rem;border-radius:8px;display:none}
-    .status-msg.info{background:rgba(91,122,153,.2);color:var(--primary)}
-    .status-msg.success{background:rgba(40,167,69,.2);color:#5cb85c}
-    .status-msg.error{background:rgba(220,53,69,.2);color:#e05c6a}
-    .session-box{display:none;margin-top:1rem;padding:1rem;background:rgba(0,0,0,.3);border-radius:10px;border:1px solid rgba(92,184,92,.3)}
-    .session-box p{font-size:.75rem;color:rgba(212,220,230,.6);margin-bottom:.5rem}
-    .session-box textarea{width:100%;background:transparent;border:none;color:var(--light);font-size:.7rem;resize:none;height:80px;outline:none;font-family:monospace}
-    .copy-btn{background:rgba(91,122,153,.3);border:1px solid var(--glass-border);border-radius:6px;padding:.4rem 1rem;color:var(--light);cursor:pointer;font-size:.8rem;margin-top:.5rem}
+    .status-msg.info{background:rgba(6,182,212,.1);color:var(--cyan);border:1px solid rgba(6,182,212,.2)}
+    .status-msg.success{background:rgba(34,197,94,.1);color:var(--green);border:1px solid rgba(34,197,94,.2)}
+    .status-msg.error{background:rgba(239,68,68,.1);color:#ef4444;border:1px solid rgba(239,68,68,.2)}
+    .session-box{display:none;margin-top:1rem;padding:1rem;background:rgba(0,0,0,.3);border-radius:10px;border:1px solid rgba(34,197,94,.2)}
+    .session-box p{font-size:.75rem;color:var(--muted);margin-bottom:.5rem}
+    .session-box textarea{width:100%;background:transparent;border:none;color:var(--text);font-size:.7rem;resize:none;height:80px;outline:none;font-family:'JetBrains Mono',monospace}
+    .copy-btn{background:rgba(6,182,212,.15);border:1px solid rgba(6,182,212,.3);border-radius:8px;padding:.5rem 1.25rem;color:var(--cyan);cursor:pointer;font-size:.8rem;margin-top:.5rem;font-family:'Space Grotesk',sans-serif;transition:background .2s}
+    .copy-btn:hover{background:rgba(6,182,212,.25)}
     .spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;margin-right:6px;vertical-align:middle}
     @keyframes spin{to{transform:rotate(360deg)}}
-    .steps{margin-top:1.5rem;font-size:.8rem;color:rgba(212,220,230,.55)}
-    .steps ol{padding-left:1.2rem;line-height:2}
   </style>
 </head>
 <body>
-  <div class="card">
-    <div class="logo">
-      <h1><i class="fab fa-whatsapp"></i> TRUTH-MD</h1>
-      <p>WhatsApp Session Pairing</p>
+  <div class="top-bar"></div>
+  <div class="bg-grid"></div>
+  <div class="container">
+    <div class="card">
+      <div class="stats-header">
+        <div class="stats-icon"><i class="fas fa-chart-line"></i></div>
+        <h2>Server Stats</h2>
+      </div>
+      <div class="stat-row"><span class="stat-label"><i class="fas fa-circle" style="color:var(--green);font-size:8px"></i> Status</span><span class="stat-value online">Online</span></div>
+      <div class="stat-row"><span class="stat-label"><i class="far fa-clock"></i> Uptime</span><span class="stat-value zero" id="uptimeVal">-</span></div>
+      <div class="stat-row"><span class="stat-label"><i class="fas fa-users"></i> Visitors</span><span class="stat-value zero" id="visitorsVal">0</span></div>
+      <div class="stat-row"><span class="stat-label"><i class="fas fa-server"></i> Requests</span><span class="stat-value zero" id="requestsVal">0</span></div>
+      <div class="stat-row"><span class="stat-label"><i class="fas fa-check-circle"></i> Success</span><span class="stat-value zero" id="successVal">0</span></div>
+      <div class="stat-row"><span class="stat-label"><i class="fas fa-times-circle"></i> Failed</span><span class="stat-value zero" id="failedVal">0</span></div>
     </div>
-    <label>Phone Number (with country code)</label>
-    <div class="input-row">
-      <input type="tel" id="phoneInput" placeholder="e.g. 2547xxxxxxxx"/>
-    </div>
-    <button class="btn" id="pairBtn" onclick="startPairing()"><i class="fas fa-link"></i> Get Pairing Code</button>
-    <div class="code-box" id="codeBox">
-      <p>Enter this code in WhatsApp → Linked Devices → Link with phone number</p>
-      <div class="code-display" id="codeDisplay">----</div>
-    </div>
-    <div class="status-msg" id="statusMsg"></div>
-    <div class="session-box" id="sessionBox">
-      <p>Your Session ID (copy and save this):</p>
-      <textarea id="sessionText" readonly></textarea>
-      <button class="copy-btn" onclick="copySession()"><i class="fas fa-copy"></i> Copy Session ID</button>
-    </div>
-    <div class="steps">
-      <ol>
-        <li>Enter your WhatsApp number with country code</li>
-        <li>Click "Get Pairing Code"</li>
-        <li>Open WhatsApp → Linked Devices → Link with phone number</li>
-        <li>Enter the 8-digit code shown above</li>
-        <li>Your session ID will appear automatically</li>
-      </ol>
+
+    <div class="card">
+      <div class="pair-title">TRUTH-MD</div>
+      <p class="pair-sub">Enter your WhatsApp number with country code</p>
+      <div class="status-badge"><i class="fas fa-link"></i> Ready to pair</div>
+      <div class="input-wrapper">
+        <input type="tel" id="phoneInput" placeholder="2547xxxxxxxxx"/>
+      </div>
+      <button class="btn-pair" id="pairBtn" onclick="startPairing()">GENERATE PAIR CODE</button>
+      <div class="code-box" id="codeBox">
+        <p>Enter this code in WhatsApp → Linked Devices → Link with phone number</p>
+        <div class="code-display" id="codeDisplay">----</div>
+      </div>
+      <div class="status-msg" id="statusMsg"></div>
+      <div class="session-box" id="sessionBox">
+        <p>Your Session ID (copy and save this):</p>
+        <textarea id="sessionText" readonly></textarea>
+        <button class="copy-btn" onclick="copySession()"><i class="fas fa-copy"></i> Copy Session ID</button>
+      </div>
     </div>
   </div>
   <script>
-    let evtSource=null;
+    fetch('/uptime').then(r=>r.json()).then(d=>{document.getElementById('uptimeVal').textContent=d.uptime}).catch(()=>{});
+    let evtSource=null,requests=0,success=0,failed=0;
     function showStatus(msg,type){const el=document.getElementById('statusMsg');el.textContent=msg;el.className='status-msg '+type;el.style.display='block'}
     function startPairing(){
       const num=document.getElementById('phoneInput').value.replace(/[^0-9]/g,'');
       if(!num||num.length<7){showStatus('Please enter a valid phone number.','error');return}
       const btn=document.getElementById('pairBtn');
-      btn.disabled=true;btn.innerHTML='<span class="spinner"></span>Connecting...';
+      btn.disabled=true;btn.innerHTML='<span class="spinner"></span>CONNECTING...';
       document.getElementById('codeBox').style.display='none';
       document.getElementById('sessionBox').style.display='none';
       showStatus('Connecting to WhatsApp...','info');
+      requests++;document.getElementById('requestsVal').textContent=requests;
       if(evtSource)evtSource.close();
       evtSource=new EventSource('/code?number='+encodeURIComponent(num));
       evtSource.addEventListener('code',(e)=>{
@@ -87,23 +112,25 @@
         document.getElementById('codeDisplay').textContent=code;
         document.getElementById('codeBox').style.display='block';
         showStatus('Code ready — enter it in WhatsApp now.','info');
-        btn.innerHTML='<span class="spinner"></span>Waiting for scan...';
+        btn.innerHTML='<span class="spinner"></span>WAITING FOR SCAN...';
       });
       evtSource.addEventListener('session',(e)=>{
         const{sessionId}=JSON.parse(e.data);
         document.getElementById('sessionText').value=sessionId;
         document.getElementById('sessionBox').style.display='block';
-        showStatus('Session connected! Copy your Session ID above.','success');
-        btn.disabled=false;btn.innerHTML='<i class="fas fa-link"></i> Get Pairing Code';
+        showStatus('Session connected! Copy your Session ID.','success');
+        btn.disabled=false;btn.innerHTML='GENERATE PAIR CODE';
+        success++;document.getElementById('successVal').textContent=success;
         evtSource.close();
       });
       evtSource.addEventListener('error',(e)=>{
         try{const{message}=JSON.parse(e.data);showStatus('Error: '+message,'error')}
         catch{showStatus('Connection error. Please try again.','error')}
-        btn.disabled=false;btn.innerHTML='<i class="fas fa-link"></i> Get Pairing Code';
+        btn.disabled=false;btn.innerHTML='GENERATE PAIR CODE';
+        failed++;document.getElementById('failedVal').textContent=failed;
         evtSource.close();
       });
-      evtSource.onerror=()=>{showStatus('Connection lost. Please try again.','error');btn.disabled=false;btn.innerHTML='<i class="fas fa-link"></i> Get Pairing Code';evtSource.close()};
+      evtSource.onerror=()=>{showStatus('Connection lost. Please try again.','error');btn.disabled=false;btn.innerHTML='GENERATE PAIR CODE';failed++;document.getElementById('failedVal').textContent=failed;evtSource.close()};
     }
     function copySession(){
       navigator.clipboard.writeText(document.getElementById('sessionText').value).then(()=>{
