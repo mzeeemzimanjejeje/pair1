@@ -88,51 +88,76 @@ app.post('/api/pair/code', (req, res) => {
     };
 
     const pair = getPairModule();
-    const fakeRes = {
-        writeHead: () => {},
-        write: (data) => {
-            try {
-                const lines = data.split('\n');
-                for (const line of lines) {
-                    if (line.startsWith('data: ')) {
-                        const parsed = JSON.parse(line.slice(6));
-                        if (parsed.code) {
-                            activePairingState.pairingCode = parsed.code;
-                            activePairingState.codeIssuedAt = Date.now();
-                            activePairingState.state = 'code_ready';
-                        }
-                        if (parsed.sessionId) {
-                            activePairingState.sessionId = parsed.sessionId;
-                            activePairingState.connected = true;
-                            activePairingState.state = 'connected';
+
+    const codePromise = new Promise((resolve, reject) => {
+        const timeout = setTimeout(() => reject(new Error('Timeout waiting for pairing code')), 30000);
+
+        const fakeRes = {
+            setHeader: () => {},
+            flushHeaders: () => {},
+            writeHead: () => {},
+            write: (data) => {
+                try {
+                    const lines = String(data).split('\n');
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            const parsed = JSON.parse(line.slice(6));
+                            if (parsed.code) {
+                                activePairingState.pairingCode = parsed.code;
+                                activePairingState.codeIssuedAt = Date.now();
+                                activePairingState.state = 'code_ready';
+                                clearTimeout(timeout);
+                                resolve(parsed.code);
+                            }
+                            if (parsed.sessionId) {
+                                activePairingState.sessionId = parsed.sessionId;
+                                activePairingState.connected = true;
+                                activePairingState.state = 'connected';
+                            }
+                            if (parsed.message && !parsed.code && !parsed.sessionId) {
+                                activePairingState.lastError = parsed.message;
+                                activePairingState.state = 'error';
+                                clearTimeout(timeout);
+                                reject(new Error(parsed.message));
+                            }
                         }
                     }
-                    if (line.startsWith('event: error')) {
-                        activePairingState.state = 'error';
-                    }
-                }
-            } catch (_) {}
-        },
-        end: () => {},
-        on: () => {},
-        flush: () => {}
-    };
-    fakeRes.writeHead(200, {});
+                } catch (_) {}
+            },
+            end: () => {},
+            on: () => fakeRes,
+            once: () => fakeRes,
+            emit: () => {},
+            flush: () => {},
+            headersSent: false,
+            socket: req.socket
+        };
 
-    const fakeReq = { query: { number: cleanPhone }, headers: req.headers, socket: req.socket };
-    try {
-        pair(fakeReq, fakeRes, () => {});
-    } catch (err) {
-        activePairingState.lastError = err.message;
-        activePairingState.state = 'error';
-    }
+        const fakeReq = {
+            query: { number: cleanPhone },
+            headers: req.headers,
+            socket: req.socket,
+            on: () => fakeReq,
+            once: () => fakeReq
+        };
 
-    setTimeout(() => {
-        if (activePairingState.pairingCode) {
-            return res.json({ code: activePairingState.pairingCode, phoneNumber: cleanPhone });
+        try {
+            pair.handle(fakeReq, fakeRes, () => {});
+        } catch (err) {
+            clearTimeout(timeout);
+            reject(err);
         }
-        res.json({ code: 'PENDING', phoneNumber: cleanPhone, message: 'Code being generated, poll /api/pair/status' });
-    }, 8000);
+    });
+
+    codePromise
+        .then(code => {
+            res.json({ code, phoneNumber: cleanPhone });
+        })
+        .catch(err => {
+            activePairingState.lastError = err.message;
+            activePairingState.state = 'error';
+            res.status(503).json({ error: 'pairing_failed', message: err.message });
+        });
 });
 
 app.post('/api/pair/reset', (req, res) => {
