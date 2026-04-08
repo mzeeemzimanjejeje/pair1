@@ -1,29 +1,27 @@
 FROM node:20-slim
 
-# Install pnpm matching workspace version
 RUN npm install -g pnpm@10
 
 WORKDIR /app
 
-# Copy workspace manifests for layer caching
+# Copy ALL workspace package.json files for proper dependency installation
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY lib/api-zod/package.json ./lib/api-zod/
 COPY lib/api-client-react/package.json ./lib/api-client-react/
 COPY lib/api-spec/package.json ./lib/api-spec/
 COPY lib/db/package.json ./lib/db/
 COPY artifacts/api-server/package.json ./artifacts/api-server/
+COPY artifacts/pairing-site/package.json ./artifacts/pairing-site/
 
-# Install dependencies (skip build scripts from native modules)
-RUN pnpm install --frozen-lockfile --ignore-scripts
+# Install all workspace dependencies
+RUN pnpm install --no-frozen-lockfile --ignore-scripts
 
 # Copy full source
 COPY . .
 
-# Build shared libs then the API server
-RUN pnpm --filter @workspace/api-zod run build --if-present || true
+# Single build command: builds frontend + api-server + copies frontend into dist
 RUN pnpm --filter @workspace/api-server run build
 
-# Koyeb / any host injects PORT at runtime
 EXPOSE 3000
 
 CMD ["node", "--enable-source-maps", "artifacts/api-server/dist/index.mjs"]
