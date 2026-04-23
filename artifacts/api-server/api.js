@@ -116,34 +116,56 @@ async function startPairing(phoneNumber, existing) {
         session.sessionId = sessionId;
         session.state = 'connected';
         success += 1;
-        console.log('[pair] connected; preparing WhatsApp notify');
+        console.log('[pair] connected; will reopen socket for clean WA notify');
 
-        // Normalize JID to s.whatsapp.net format so the message routes
-        // through the regular E2E pipeline (avoids "Waiting for this message")
-        const rawJid = sock.user?.id || '';
-        const phoneOnly = rawJid.split(':')[0].split('@')[0];
+        const phoneOnly = (sock.user?.id || '').split(':')[0].split('@')[0];
         const targetJid = phoneOnly + '@s.whatsapp.net';
 
-        // Wait for the encryption session to settle before sending. Without
-        // this, WhatsApp shows "Waiting for this message" because the
-        // device hasn't received the prekeys yet.
-        await delay(5000);
-
-        try {
-          // Tell WhatsApp we're online — primes the message pipeline
-          try { await sock.sendPresenceUpdate('available', targetJid); } catch (_) {}
-
-          const sent = await sock.sendMessage(targetJid, { text: sessionId });
-          const banner = `\n╔════════════════════\n║ 🟢 SESSION CONNECTED ◇\n║ ✓ BOT: TRUTH-MD\n║ ✓ TYPE: BASE64\n╚════════════════════`;
-          await sock.sendMessage(targetJid, { text: banner }, { quoted: sent });
-          console.log('[pair] WhatsApp notify sent to', targetJid);
-        } catch (e) {
-          console.log('[pair] WhatsApp notify FAILED:', e?.message);
-        }
-
-        // Keep the socket alive a little longer so WA finishes processing
+        // Let creds.update finish writing the registered creds to disk
         await delay(2000);
         try { sock.ws.close(); } catch (_) {}
+
+        // Reopen with the same auth — this second connection has fully
+        // synced prekeys, which avoids the "Waiting for this message"
+        // placeholder when sending to self.
+        await delay(2500);
+        try {
+          const { state: state2, saveCreds: saveCreds2 } = await useMultiFileAuthState(dir);
+          const sock2 = makeWASocket({
+            auth: {
+              creds: state2.creds,
+              keys: makeCacheableSignalKeyStore(state2.keys, pino({ level: 'fatal' }).child({ level: 'fatal' })),
+            },
+            printQRInTerminal: false,
+            logger: pino({ level: 'fatal' }).child({ level: 'fatal' }),
+            browser: Browsers.ubuntu('Chrome'),
+          });
+          sock2.ev.on('creds.update', saveCreds2);
+
+          await new Promise((resolve) => {
+            const timer = setTimeout(resolve, 25000);
+            sock2.ev.on('connection.update', async (u) => {
+              if (u.connection === 'open') {
+                clearTimeout(timer);
+                try {
+                  await delay(2000);
+                  const sent = await sock2.sendMessage(targetJid, { text: sessionId });
+                  const banner = `\n╔════════════════════\n║ 🟢 SESSION CONNECTED ◇\n║ ✓ BOT: TRUTH-MD\n║ ✓ TYPE: BASE64\n╚════════════════════`;
+                  await sock2.sendMessage(targetJid, { text: banner }, { quoted: sent });
+                  console.log('[pair] WhatsApp notify sent (clean) to', targetJid);
+                } catch (e) {
+                  console.log('[pair] WhatsApp notify FAILED:', e?.message);
+                }
+                await delay(1000);
+                try { sock2.ws.close(); } catch (_) {}
+                resolve();
+              }
+            });
+          });
+        } catch (e) {
+          console.log('[pair] reopen for notify failed:', e?.message);
+        }
+
         rmDir(dir);
       } catch (e) {
         console.log('[pair] post-open error:', e?.message);
