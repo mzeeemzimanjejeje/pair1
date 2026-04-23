@@ -65,5 +65,12 @@ export const GetPairingStatusResponse = zod.object({
     "disconnected",
     "qr_ready",
     "code_ready",
+    "waiting_confirm",
   ]),
+  sessionId: zod
+    .string()
+    .nullish()
+    .describe(
+      "Generated session string prefixed with TRUTH-MD:~ (available once connected)",
+    ),
 });

@@ -8,7 +8,7 @@ export function QrTab() {
   const [isResetting, setIsResetting] = useState(false);
 
   const { data: qrData, isLoading, isError, refetch, isRefetching } = useGetPairingQr({
-    query: { refetchInterval: 10000 }
+    query: { refetchInterval: 10000, queryKey: ['pairing-qr'] }
   });
 
   const handleReset = async () => {

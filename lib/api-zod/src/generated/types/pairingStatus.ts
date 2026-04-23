@@ -13,12 +13,6 @@ export interface PairingStatus {
   /** Connected phone number if available */
   phone?: string | null;
   state: PairingStatusState;
-  /** Current pairing code if one has been issued */
-  pairingCode?: string | null;
-  /** Unix timestamp (ms) when the current code was issued */
-  codeIssuedAt?: number | null;
-  /** Human-readable error message from last failure */
-  lastError?: string | null;
   /** Generated session string prefixed with TRUTH-MD:~ (available once connected) */
   sessionId?: string | null;
 }

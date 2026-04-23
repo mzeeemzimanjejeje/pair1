@@ -12,9 +12,6 @@ router.get("/status", async (req: Request, res: Response) => {
       connected: state.connected,
       phone: state.phone,
       state: state.state,
-      pairingCode: state.pairingCode ?? null,
-      codeIssuedAt: state.codeIssuedAt ?? null,
-      lastError: state.lastError ?? null,
       sessionId: state.sessionId ?? null,
     });
   } catch (err) {

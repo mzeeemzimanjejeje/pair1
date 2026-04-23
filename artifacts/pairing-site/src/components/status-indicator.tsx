@@ -3,7 +3,7 @@ import { useGetPairingStatus } from '@workspace/api-client-react';
 
 export function StatusIndicator() {
   const { data: status } = useGetPairingStatus({
-    query: { refetchInterval: 5000 }
+    query: { refetchInterval: 5000, queryKey: ['pairing-status'] }
   });
 
   const isConnected = status?.connected;

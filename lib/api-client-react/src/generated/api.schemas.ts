@@ -36,6 +36,7 @@ export const PairingStatusState = {
   disconnected: "disconnected",
   qr_ready: "qr_ready",
   code_ready: "code_ready",
+  waiting_confirm: "waiting_confirm",
 } as const;
 
 export interface PairingStatus {
@@ -44,6 +45,8 @@ export interface PairingStatus {
   /** Connected phone number if available */
   phone?: string | null;
   state: PairingStatusState;
+  /** Generated session string prefixed with TRUTH-MD:~ (available once connected) */
+  sessionId?: string | null;
 }
 
 export type ServerStatsStatus =

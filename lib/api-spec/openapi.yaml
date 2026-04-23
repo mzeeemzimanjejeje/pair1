@@ -154,18 +154,6 @@ components:
         state:
           type: string
           enum: [connecting, connected, disconnected, qr_ready, code_ready, waiting_confirm]
-        pairingCode:
-          type: string
-          nullable: true
-          description: Current pairing code if one has been issued
-        codeIssuedAt:
-          type: number
-          nullable: true
-          description: Unix timestamp (ms) when the current code was issued
-        lastError:
-          type: string
-          nullable: true
-          description: Human-readable error message from last failure
         sessionId:
           type: string
           nullable: true

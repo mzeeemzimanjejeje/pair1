@@ -80,8 +80,8 @@ export function Home() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   // Status polling — every 1 s for snappy connected/session detection
-  const { data: status } = useGetPairingStatus({ query: { refetchInterval: 1000 } });
-  const { data: stats }  = useGetServerStats({   query: { refetchInterval: 5000 } });
+  const { data: status } = useGetPairingStatus({ query: { refetchInterval: 1000, queryKey: ['pairing-status'] } });
+  const { data: stats }  = useGetServerStats({   query: { refetchInterval: 5000, queryKey: ['server-stats'] } });
 
   // Sync uptime from server, then tick locally
   useEffect(() => {
@@ -98,27 +98,14 @@ export function Home() {
       setPhase('connected');
       setPairingCode(null);
       setCountdown(null);
-      if (status?.sessionId) setSessionId(status.sessionId);
+      if ((status as any)?.sessionId) setSessionId((status as any).sessionId);
     }
-  }, [status?.connected, status?.state, status?.sessionId]);
-
-  // Detect server-side session wipe only while waiting for WhatsApp to confirm
-  useEffect(() => {
-    if (
-      phase === 'waiting_confirm' &&
-      status && !status.pairingCode && !status.connected
-    ) {
-      setPhase('expired');
-      setCountdown(0);
-    }
-  }, [status?.pairingCode, status?.connected, phase]);
+  }, [status?.connected, status?.state, (status as any)?.sessionId]);
 
   // Surface server error messages
   useEffect(() => {
-    if (status?.lastError && phase !== 'connected') {
-      setErrorMsg(status.lastError);
-    }
-  }, [status?.lastError]);
+    // No error handling from status
+  }, []);
 
   function notifyCodeReady(code: string) {
     try {
