@@ -110,24 +110,39 @@ async function startPairing(phoneNumber, existing) {
     const { connection, lastDisconnect } = s;
     if (connection === 'open' && session.id === id) {
       try {
-        await delay(3000);
+        // Mark connected immediately so the React UI shows success right away
         const b64 = Buffer.from(JSON.stringify(state.creds)).toString('base64');
         const sessionId = 'TRUTH-MD:~' + b64;
         session.sessionId = sessionId;
         session.state = 'connected';
         success += 1;
-        console.log('[pair] connected, sending session to WhatsApp');
+        console.log('[pair] connected; preparing WhatsApp notify');
+
+        // Normalize JID to s.whatsapp.net format so the message routes
+        // through the regular E2E pipeline (avoids "Waiting for this message")
+        const rawJid = sock.user?.id || '';
+        const phoneOnly = rawJid.split(':')[0].split('@')[0];
+        const targetJid = phoneOnly + '@s.whatsapp.net';
+
+        // Wait for the encryption session to settle before sending. Without
+        // this, WhatsApp shows "Waiting for this message" because the
+        // device hasn't received the prekeys yet.
+        await delay(8000);
 
         try {
-          const sent = await sock.sendMessage(sock.user.id, { text: sessionId });
+          // Tell WhatsApp we're online — primes the message pipeline
+          try { await sock.sendPresenceUpdate('available', targetJid); } catch (_) {}
+
+          const sent = await sock.sendMessage(targetJid, { text: sessionId });
           const banner = `\n╔════════════════════\n║ 🟢 SESSION CONNECTED ◇\n║ ✓ BOT: TRUTH-MD\n║ ✓ TYPE: BASE64\n╚════════════════════`;
-          await sock.sendMessage(sock.user.id, { text: banner }, { quoted: sent });
-          console.log('[pair] WhatsApp notify sent');
+          await sock.sendMessage(targetJid, { text: banner }, { quoted: sent });
+          console.log('[pair] WhatsApp notify sent to', targetJid);
         } catch (e) {
           console.log('[pair] WhatsApp notify FAILED:', e?.message);
         }
 
-        await delay(500);
+        // Keep the socket alive a little longer so WA finishes processing
+        await delay(2000);
         try { sock.ws.close(); } catch (_) {}
         rmDir(dir);
       } catch (e) {
