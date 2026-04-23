@@ -102,6 +102,23 @@ export function Home() {
     }
   }, [status?.connected, status?.state, (status as any)?.sessionId]);
 
+  // If the server regenerated the pairing code (e.g. after a WhatsApp 408
+  // timeout), pick up the fresh code so the user always sees a valid one.
+  useEffect(() => {
+    const serverCode = (status as any)?.code as string | null | undefined;
+    if (
+      serverCode &&
+      pairingCode &&
+      serverCode !== pairingCode &&
+      (phase === 'code_ready' || status?.state === 'code_ready')
+    ) {
+      setPairingCode(serverCode);
+      setCountdown(CODE_TTL_SECONDS);
+      setPhase('code_ready');
+      notifyCodeReady(serverCode);
+    }
+  }, [(status as any)?.code, status?.state, pairingCode, phase]);
+
   // Surface server error messages
   useEffect(() => {
     // No error handling from status

@@ -83,11 +83,14 @@ router.post('/pair/reset', (req, res) => {
   res.json({ ok: true });
 });
 
-// Single global pairing flow. Mirrors Techword pair.js logic.
-async function startPairing(phoneNumber) {
-  const id = makeid(6);
-  const dir = `${tempRoot}/pair_${id}`;
-  session = { ...createEmptySession(), id, state: 'connecting', phone: phoneNumber, dir };
+// Single global pairing flow. Mirrors Techword pair.js logic, but also
+// surfaces refreshed pairing codes to the UI via /api/pair/status.
+async function startPairing(phoneNumber, existing) {
+  const id = existing?.id || makeid(6);
+  const dir = existing?.dir || `${tempRoot}/pair_${id}`;
+  if (!existing) {
+    session = { ...createEmptySession(), id, state: 'connecting', phone: phoneNumber, dir };
+  }
 
   const { state, saveCreds } = await useMultiFileAuthState(dir);
 
@@ -133,7 +136,22 @@ async function startPairing(phoneNumber) {
     } else if (connection === 'close' && session.id === id) {
       const statusCode = lastDisconnect?.error?.output?.statusCode;
       console.log('[pair] connection closed, status:', statusCode);
-      if (session.state !== 'connected') {
+      if (session.state === 'connected') return; // happy path
+      if (statusCode === 401) {
+        session.state = 'expired';
+        return;
+      }
+      // WebSocket dropped before user paired (commonly 408 timeout from
+      // WhatsApp). Reconnect with the SAME auth dir, regenerate the code,
+      // and write it to session.code so the UI's status poll picks it up.
+      console.log('[pair] reconnecting in 3s with fresh code…');
+      session.state = 'connecting';
+      await delay(3000);
+      if (session.id !== id || session.state === 'connected') return;
+      try {
+        await startPairing(phoneNumber, { id, dir });
+      } catch (e) {
+        console.log('[pair] reconnect failed:', e?.message);
         session.state = 'expired';
       }
     }
