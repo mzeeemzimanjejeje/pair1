@@ -30,8 +30,6 @@ function createEmptySession() {
     sessionId: null,
     sock: null,
     dir: null,
-    creds: null,
-    saveCreds: null,
   };
 }
 
@@ -84,14 +82,16 @@ router.post('/pair/reset', (req, res) => {
   res.json({ ok: true });
 });
 
-async function startPairing(phoneNumber) {
-  const id = makeid(6);
+// Mirrors Techword-bot-pair- pair.js exactly: on close (non-401),
+// retry the whole socket so the user's code entry can still be received.
+async function startPairing(phoneNumber, existingId) {
+  const id = existingId || makeid(6);
   const dir = `${tempRoot}/pair_${id}`;
-  session = { ...createEmptySession(), id, state: 'connecting', phone: phoneNumber, dir };
+  if (!existingId) {
+    session = { ...createEmptySession(), id, state: 'connecting', phone: phoneNumber, dir };
+  }
 
   const { state, saveCreds } = await useMultiFileAuthState(dir);
-  session.creds = state.creds;
-  session.saveCreds = saveCreds;
 
   const sock = makeWASocket({
     auth: {
@@ -110,7 +110,7 @@ async function startPairing(phoneNumber) {
     if (connection === 'open') {
       try {
         await delay(3000);
-        const b64 = Buffer.from(JSON.stringify(session.creds)).toString('base64');
+        const b64 = Buffer.from(JSON.stringify(state.creds)).toString('base64');
         const sessionId = 'TRUTH-MD:~' + b64;
         session.sessionId = sessionId;
         session.state = 'connected';
@@ -118,28 +118,41 @@ async function startPairing(phoneNumber) {
 
         try {
           const sent = await sock.sendMessage(sock.user.id, { text: sessionId });
-          const banner = `\n╔════════════════════\n║ 🟢 SESSION CONNECTED ◇\n║ ✓ BOT: TRUTH-MD\n║ ✓ TYPE: BASE64\n║ ✓ OWNER: MZEEEMZIMANJEJEJE\n╚════════════════════`;
+          const banner = `\n╔════════════════════\n║ 🟢 SESSION CONNECTED ◇\n║ ✓ BOT: TRUTH-MD\n║ ✓ TYPE: BASE64\n╚════════════════════`;
           await sock.sendMessage(sock.user.id, { text: banner }, { quoted: sent });
         } catch (e) {
           console.log('WhatsApp notify failed:', e?.message);
         }
+
+        // Cleanup like pair.js — keep session info in memory for status polling,
+        // but close the socket and remove the temp creds dir.
+        await delay(500);
+        try { sock.ws.close(); } catch (_) {}
+        rmDir(dir);
       } catch (e) {
-        console.log('Post-open handler error:', e?.message);
+        console.log('Post-open error:', e?.message);
       }
-    } else if (connection === 'close') {
-      const statusCode = lastDisconnect?.error?.output?.statusCode;
-      if (statusCode === 401) {
-        // logged out — clear
-        session.state = 'disconnected';
+    } else if (
+      connection === 'close' &&
+      lastDisconnect?.error?.output?.statusCode !== 401 &&
+      session.state !== 'connected' &&
+      session.id === id
+    ) {
+      // Reconnect like pair.js does: gives the user a working socket
+      // when WhatsApp drops the connection mid-pairing.
+      console.log('Connection dropped, reconnecting in 10s…');
+      await delay(10000);
+      if (session.id === id && session.state !== 'connected') {
+        try { await startPairing(phoneNumber, id); } catch (e) {
+          console.log('Reconnect failed:', e?.message);
+          session.state = 'disconnected';
+        }
       }
-      // For other close events while waiting for user to enter code,
-      // keep state at 'code_ready' so the UI keeps polling without confusion.
     }
   });
 
-  // Brief warmup so the WebSocket has time to open before we request the code
-  await delay(1500);
   if (!sock.authState.creds.registered) {
+    await delay(1500);
     const customCodes = ['TRUTHTEC', 'TRUTHMDX', 'TRUTHMDD'];
     const custom = customCodes[Math.floor(Math.random() * customCodes.length)];
     const code = await sock.requestPairingCode(phoneNumber, custom);
@@ -158,12 +171,10 @@ router.post('/pair/code', async (req, res) => {
     return res.status(400).json({ error: 'invalid_phone', message: 'Phone number is required (digits only, with country code).' });
   }
 
-  // If a code is already live for this phone, return it
   if (session.phone === phoneNumber && session.code && session.state === 'code_ready') {
     return res.json({ code: session.code, phoneNumber });
   }
 
-  // Otherwise reset and start fresh
   if (session.state !== 'disconnected') resetSession();
 
   try {
