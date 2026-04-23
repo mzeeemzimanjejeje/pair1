@@ -160,18 +160,14 @@ async function startPairing(phoneNumber, existing) {
         return;
       }
       // WebSocket dropped before user paired (commonly 408 timeout from
-      // WhatsApp). Wipe the auth dir and restart with a brand-new id so
-      // the next pairing code is generated from a fully clean state —
-      // reusing partial creds was leaving stale prekeys that made the new
-      // code appear valid to the user but never actually pair.
-      console.log('[pair] reconnecting in 3s with fresh auth…');
+      // WhatsApp). Reuse the SAME auth dir like the reference pair.js does
+      // and generate a fresh code; the UI's /status poll picks it up.
+      console.log('[pair] reconnecting in 10s with same auth dir…');
       session.state = 'connecting';
-      session.code = null;
-      rmDir(dir);
-      await delay(3000);
+      await delay(10000);
       if (session.id !== id || session.state === 'connected') return;
       try {
-        await startPairing(phoneNumber);
+        await startPairing(phoneNumber, { id, dir });
       } catch (e) {
         console.log('[pair] reconnect failed:', e?.message);
         session.state = 'expired';
@@ -183,13 +179,14 @@ async function startPairing(phoneNumber, existing) {
   await delay(1500);
 
   if (!sock.authState.creds.registered) {
+    // Let Baileys generate the standard random pairing code. Custom codes
+    // are increasingly rejected by WhatsApp servers, which surfaces as
+    // "Couldn't link device" when the user enters them on their phone.
     let code;
     let lastErr;
     for (let attempt = 1; attempt <= 3; attempt++) {
       try {
-        const customCodes = ['TRUTHTEC', 'TRUTHMDX', 'TRUTHMDD'];
-        const custom = customCodes[Math.floor(Math.random() * customCodes.length)];
-        code = await sock.requestPairingCode(phoneNumber, custom);
+        code = await sock.requestPairingCode(phoneNumber);
         break;
       } catch (e) {
         lastErr = e;
