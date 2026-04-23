@@ -153,14 +153,18 @@ async function startPairing(phoneNumber, existing) {
         return;
       }
       // WebSocket dropped before user paired (commonly 408 timeout from
-      // WhatsApp). Reconnect with the SAME auth dir, regenerate the code,
-      // and write it to session.code so the UI's status poll picks it up.
-      console.log('[pair] reconnecting in 3s with fresh code…');
+      // WhatsApp). Wipe the auth dir and restart with a brand-new id so
+      // the next pairing code is generated from a fully clean state —
+      // reusing partial creds was leaving stale prekeys that made the new
+      // code appear valid to the user but never actually pair.
+      console.log('[pair] reconnecting in 3s with fresh auth…');
       session.state = 'connecting';
+      session.code = null;
+      rmDir(dir);
       await delay(3000);
       if (session.id !== id || session.state === 'connected') return;
       try {
-        await startPairing(phoneNumber, { id, dir });
+        await startPairing(phoneNumber);
       } catch (e) {
         console.log('[pair] reconnect failed:', e?.message);
         session.state = 'expired';
