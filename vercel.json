@@ -1,7 +1,6 @@
 {
   "version": 2,
-  "installCommand": "pnpm install --no-frozen-lockfile --ignore-scripts=false",
-  "buildCommand": "pnpm --filter @workspace/pairing-site run build && rm -rf artifacts/api-server/public && cp -r artifacts/pairing-site/dist/public artifacts/api-server/public",
+  "installCommand": "cd artifacts/api-server && npm install --legacy-peer-deps",
   "builds": [
     {
       "src": "artifacts/api-server/index.js",
@@ -9,17 +8,16 @@
       "config": {
         "includeFiles": [
           "artifacts/api-server/*.html",
-          "artifacts/api-server/public/**",
-          "artifacts/api-server/store.js",
-          "artifacts/api-server/id.js",
-          "artifacts/api-server/api.js",
-          "artifacts/api-server/pair.js"
+          "artifacts/api-server/*.js"
         ],
         "maxDuration": 60
       }
     }
   ],
   "routes": [
-    { "src": "/(.*)", "dest": "artifacts/api-server/index.js" }
+    {
+      "src": "/(.*)",
+      "dest": "artifacts/api-server/index.js"
+    }
   ]
 }
