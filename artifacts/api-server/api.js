@@ -127,7 +127,7 @@ async function startPairing(phoneNumber, existing) {
         // Wait for the encryption session to settle before sending. Without
         // this, WhatsApp shows "Waiting for this message" because the
         // device hasn't received the prekeys yet.
-        await delay(8000);
+        await delay(5000);
 
         try {
           // Tell WhatsApp we're online — primes the message pipeline
