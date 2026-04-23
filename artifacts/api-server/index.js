@@ -78,9 +78,15 @@ app.get('/session-status/:id', (req, res) => {
     res.json(result);
 });
 
-// Serve React frontend (built into ./public) at root, with SPA fallback
+// On Vercel, mirror the upstream repo exactly: serve pair.html at `/`
+// (SSE-based, keeps the serverless function alive during pairing).
+// Anywhere else (Heroku/Replit/local), serve the React frontend if it
+// was built into ./public.
 const publicDir = path.join(__path, 'public');
-if (fs.existsSync(publicDir)) {
+if (process.env.VERCEL) {
+    app.get('/', (req, res) => res.sendFile(__path + '/pair.html'));
+    app.get('/pair', (req, res) => res.sendFile(__path + '/pair.html'));
+} else if (fs.existsSync(publicDir)) {
     app.use(express.static(publicDir));
     app.get(/^\/(?!api\/|code\/|validate$|validate-session$|uptime$|session-status\/|legacy$|pair\.html$).*/, (req, res, next) => {
         const indexFile = path.join(publicDir, 'index.html');
@@ -88,7 +94,6 @@ if (fs.existsSync(publicDir)) {
         next();
     });
 } else {
-    // Fallback if React build is missing — serve legacy pair page
     app.get('/', (req, res) => res.sendFile(__path + '/pair.html'));
     app.get('/pair', (req, res) => res.sendFile(__path + '/pair.html'));
 }
