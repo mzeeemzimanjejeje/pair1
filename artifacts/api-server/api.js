@@ -110,77 +110,41 @@ async function startPairing(phoneNumber, existing) {
     const { connection, lastDisconnect } = s;
     if (connection === 'open' && session.id === id) {
       try {
-        // Mark connected immediately so the React UI shows success right away
+        // Match Techword pair.js exactly: 3s delay, send to raw sock.user.id
+        // (keep the device tag — removing it triggers multi-device fanout
+        // which is what shows "Waiting for this message").
+        await delay(3000);
         const b64 = Buffer.from(JSON.stringify(state.creds)).toString('base64');
         const sessionId = 'TRUTH-MD:~' + b64;
         session.sessionId = sessionId;
         session.state = 'connected';
         success += 1;
-        console.log('[pair] connected; will reopen socket for clean WA notify');
+        console.log('[pair] connected, sending session to', sock.user?.id);
 
-        const phoneOnly = (sock.user?.id || '').split(':')[0].split('@')[0];
-        const targetJid = phoneOnly + '@s.whatsapp.net';
-
-        // Let creds.update finish writing the registered creds to disk
-        await delay(2000);
-        try { sock.ws.close(); } catch (_) {}
-
-        // Reopen with the same auth — this second connection has fully
-        // synced prekeys, which avoids the "Waiting for this message"
-        // placeholder when sending to self.
-        await delay(2500);
         try {
-          const { state: state2, saveCreds: saveCreds2 } = await useMultiFileAuthState(dir);
-          const sock2 = makeWASocket({
-            auth: {
-              creds: state2.creds,
-              keys: makeCacheableSignalKeyStore(state2.keys, pino({ level: 'fatal' }).child({ level: 'fatal' })),
-            },
-            printQRInTerminal: false,
-            logger: pino({ level: 'fatal' }).child({ level: 'fatal' }),
-            browser: Browsers.ubuntu('Chrome'),
-          });
-          sock2.ev.on('creds.update', saveCreds2);
-
-          await new Promise((resolve) => {
-            const timer = setTimeout(resolve, 25000);
-            sock2.ev.on('connection.update', async (u) => {
-              if (u.connection === 'open') {
-                clearTimeout(timer);
-                try {
-                  await delay(2000);
-                  const sent = await sock2.sendMessage(targetJid, { text: sessionId });
-                  const reply =
+          const sent = await sock.sendMessage(sock.user.id, { text: sessionId });
+          const reply =
 `╔════════════════════
-║ 🟢 SESSION CONNECTED
+║ 🟢 SESSION CONNECTED ◇
 ║ ✓ BOT: TRUTH-MD
 ║ ✓ TYPE: BASE64
 ╚════════════════════
 
 📌 *How to use your Session ID*
-1. Copy the *SESSION_ID* above (the long string starting with TRUTH-MD:~)
-2. Open your TRUTH-MD bot deployment (Heroku / Render / Replit / VPS)
+1. Copy the *SESSION_ID* above (starts with TRUTH-MD:~)
+2. Open your bot deployment (Heroku / Render / Replit / VPS)
 3. Paste it as the *SESSION_ID* environment variable
 4. Restart / redeploy your bot
 
-⚠️ *Keep this Session ID private* — anyone with it can control your WhatsApp.
-
-Need help? Reach out to the support channel.`;
-                  await sock2.sendMessage(targetJid, { text: reply }, { quoted: sent });
-                  console.log('[pair] WhatsApp notify sent (clean) to', targetJid);
-                } catch (e) {
-                  console.log('[pair] WhatsApp notify FAILED:', e?.message);
-                }
-                await delay(1000);
-                try { sock2.ws.close(); } catch (_) {}
-                resolve();
-              }
-            });
-          });
+⚠️ Keep this Session ID private — anyone with it can control your WhatsApp.`;
+          await sock.sendMessage(sock.user.id, { text: reply }, { quoted: sent });
+          console.log('[pair] WhatsApp notify sent');
         } catch (e) {
-          console.log('[pair] reopen for notify failed:', e?.message);
+          console.log('[pair] WhatsApp notify FAILED:', e?.message);
         }
 
+        await delay(100);
+        try { sock.ws.close(); } catch (_) {}
         rmDir(dir);
       } catch (e) {
         console.log('[pair] post-open error:', e?.message);
