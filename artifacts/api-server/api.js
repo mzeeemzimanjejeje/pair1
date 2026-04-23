@@ -135,7 +135,8 @@ async function startPairing(phoneNumber) {
     }
   });
 
-  // Request the pairing code immediately (no warmup delay)
+  // Brief warmup so the WebSocket has time to open before we request the code
+  await delay(1500);
   if (!sock.authState.creds.registered) {
     const customCodes = ['TRUTHTEC', 'TRUTHMDX', 'TRUTHMDD'];
     const custom = customCodes[Math.floor(Math.random() * customCodes.length)];
