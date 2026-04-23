@@ -5,7 +5,7 @@
   "scripts": {
     "preinstall": "node ./scripts/preinstall.js",
     "build": "cd artifacts/api-server && npm install --legacy-peer-deps",
-    "heroku-postbuild": "cd artifacts/api-server && npm install --legacy-peer-deps",
+    "heroku-postbuild": "cd artifacts/api-server && npm install --legacy-peer-deps && npm run build",
     "typecheck:libs": "tsc --build",
     "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck"
   },
