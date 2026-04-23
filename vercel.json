@@ -1,15 +1,25 @@
 {
   "version": 2,
   "installCommand": "pnpm install --no-frozen-lockfile --ignore-scripts=false",
-  "buildCommand": "pnpm --filter @workspace/pairing-site run build",
-  "outputDirectory": "artifacts/pairing-site/dist/public",
-  "functions": {
-    "api/index.js": {
-      "maxDuration": 60
+  "buildCommand": "pnpm --filter @workspace/pairing-site run build && rm -rf artifacts/api-server/public && cp -r artifacts/pairing-site/dist/public artifacts/api-server/public",
+  "builds": [
+    {
+      "src": "artifacts/api-server/index.js",
+      "use": "@vercel/node",
+      "config": {
+        "includeFiles": [
+          "artifacts/api-server/*.html",
+          "artifacts/api-server/public/**",
+          "artifacts/api-server/store.js",
+          "artifacts/api-server/id.js",
+          "artifacts/api-server/api.js",
+          "artifacts/api-server/pair.js"
+        ],
+        "maxDuration": 60
+      }
     }
-  },
-  "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/index" },
-    { "source": "/((?!api/).*)", "destination": "/index.html" }
+  ],
+  "routes": [
+    { "src": "/(.*)", "dest": "artifacts/api-server/index.js" }
   ]
 }
