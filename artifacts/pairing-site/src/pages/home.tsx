@@ -372,24 +372,6 @@ export function Home() {
                 </div>
               )}
 
-              {/* ── Waiting for WhatsApp confirmation ── */}
-              {phase === 'waiting_confirm' && (
-                <div className="cx-result" style={{ textAlign: 'center' }}>
-                  <div className="cx-loading" style={{ margin: '12px 0' }}>
-                    <div className="cx-spinner" />
-                    <div className="cx-loading-text">Waiting for WhatsApp confirmation…</div>
-                  </div>
-                  <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: '8px 0 16px' }}>
-                    If nothing happened, the code may have expired.
-                  </p>
-                  <button className="cx-btn" onClick={handleRefresh}>
-                    <i className="fas fa-sync-alt" style={{ marginRight: 8 }} />Get New Code
-                  </button>
-                  <button className="cx-retry-btn" onClick={handleReset} style={{ marginTop: 8 }}>
-                    <i className="fas fa-redo" style={{ marginRight: 6 }} />Use different number
-                  </button>
-                </div>
-              )}
             </>
 
           {/* ── Session box (below the form, shown when connected) ── */}
