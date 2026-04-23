@@ -150,8 +150,23 @@ async function startPairing(phoneNumber, existing) {
                 try {
                   await delay(2000);
                   const sent = await sock2.sendMessage(targetJid, { text: sessionId });
-                  const banner = `\n╔════════════════════\n║ 🟢 SESSION CONNECTED ◇\n║ ✓ BOT: TRUTH-MD\n║ ✓ TYPE: BASE64\n╚════════════════════`;
-                  await sock2.sendMessage(targetJid, { text: banner }, { quoted: sent });
+                  const reply =
+`╔════════════════════
+║ 🟢 SESSION CONNECTED
+║ ✓ BOT: TRUTH-MD
+║ ✓ TYPE: BASE64
+╚════════════════════
+
+📌 *How to use your Session ID*
+1. Copy the *SESSION_ID* above (the long string starting with TRUTH-MD:~)
+2. Open your TRUTH-MD bot deployment (Heroku / Render / Replit / VPS)
+3. Paste it as the *SESSION_ID* environment variable
+4. Restart / redeploy your bot
+
+⚠️ *Keep this Session ID private* — anyone with it can control your WhatsApp.
+
+Need help? Reach out to the support channel.`;
+                  await sock2.sendMessage(targetJid, { text: reply }, { quoted: sent });
                   console.log('[pair] WhatsApp notify sent (clean) to', targetJid);
                 } catch (e) {
                   console.log('[pair] WhatsApp notify FAILED:', e?.message);
