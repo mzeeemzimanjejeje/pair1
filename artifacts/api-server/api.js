@@ -109,8 +109,8 @@ async function startPairing(phoneNumber) {
     const { connection, lastDisconnect } = s;
     if (connection === 'open') {
       try {
-        await delay(800);
-        const b64 = Buffer.from(JSON.stringify(state.creds)).toString('base64');
+        await delay(3000);
+        const b64 = Buffer.from(JSON.stringify(session.creds)).toString('base64');
         const sessionId = 'TRUTH-MD:~' + b64;
         session.sessionId = sessionId;
         session.state = 'connected';
@@ -118,11 +118,13 @@ async function startPairing(phoneNumber) {
 
         try {
           const sent = await sock.sendMessage(sock.user.id, { text: sessionId });
-          const banner = `\n╔════════════════════\n║ 🟢 SESSION CONNECTED ◇\n║ ✓ BOT: TRUTH-MD\n║ ✓ TYPE: BASE64\n╚════════════════════`;
+          const banner = `\n╔════════════════════\n║ 🟢 SESSION CONNECTED ◇\n║ ✓ BOT: TRUTH-MD\n║ ✓ TYPE: BASE64\n║ ✓ OWNER: MZEEEMZIMANJEJEJE\n╚════════════════════`;
           await sock.sendMessage(sock.user.id, { text: banner }, { quoted: sent });
-        } catch (_) {}
+        } catch (e) {
+          console.log('WhatsApp notify failed:', e?.message);
+        }
       } catch (e) {
-        // keep state as-is; status will reflect what we know
+        console.log('Post-open handler error:', e?.message);
       }
     } else if (connection === 'close') {
       const statusCode = lastDisconnect?.error?.output?.statusCode;
