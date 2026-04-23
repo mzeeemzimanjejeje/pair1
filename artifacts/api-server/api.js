@@ -122,21 +122,16 @@ async function startPairing(phoneNumber, existing) {
         console.log('[pair] connected, sending session to', sock.user?.id);
 
         try {
-          const sent = await sock.sendMessage(sock.user.id, { text: sessionId });
           const reply =
 `╔════════════════════
 ║ 🟢 SESSION CONNECTED ◇
 ║ ✓ BOT: TRUTH-MD
 ║ ✓ TYPE: BASE64
-╚════════════════════
-
-📌 *How to use your Session ID*
-1. Copy the *SESSION_ID* above (starts with TRUTH-MD:~)
-2. Open your bot deployment (Heroku / Render / Replit / VPS)
-3. Paste it as the *SESSION_ID* environment variable
-4. Restart / redeploy your bot
-
-⚠️ Keep this Session ID private — anyone with it can control your WhatsApp.`;
+║ ✓ OWNER: MZEEEMZIMANJEJEJE
+╚════════════════════`;
+          // Same flow as the reference pair site: send the session ID, then
+          // immediately send the banner quoting it. They arrive back-to-back.
+          const sent = await sock.sendMessage(sock.user.id, { text: sessionId });
           await sock.sendMessage(sock.user.id, { text: reply }, { quoted: sent });
           console.log('[pair] WhatsApp notify sent');
         } catch (e) {
