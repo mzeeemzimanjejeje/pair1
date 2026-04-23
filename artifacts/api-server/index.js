@@ -5,7 +5,8 @@ const app = express();
 const __path = __dirname;
 const bodyParser = require("body-parser");
 const port = process.env.PORT || 5000;
-code = require('./pair');
+const codeRoute = require('./pair');
+const apiRoute = require('./api');
 const { getSession } = require('./store');
 require('events').EventEmitter.defaultMaxListeners = 500;
 
@@ -21,55 +22,41 @@ if (fs.existsSync(timestampFile)) {
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-app.use('/code', code);
+// React-frontend API surface (used by artifacts/pairing-site)
+app.use('/api', apiRoute);
 
-app.get('/validate', (req, res) => {
-    res.sendFile(__path + '/validate.html');
-});
+// Legacy SSE pairing endpoint (used by pair.html)
+app.use('/code', codeRoute);
+
+// Legacy HTML pages
+app.get('/legacy', (req, res) => res.sendFile(__path + '/pair.html'));
+app.get('/pair.html', (req, res) => res.sendFile(__path + '/pair.html'));
+app.get('/validate', (req, res) => res.sendFile(__path + '/validate.html'));
 
 app.post('/validate-session', (req, res) => {
     const { sessionId } = req.body;
     if (!sessionId || typeof sessionId !== 'string') {
         return res.json({ valid: false, error: 'No session ID provided' });
     }
-
     const trimmed = sessionId.trim();
     const prefix = 'TRUTH-MD:~';
-
     if (!trimmed.startsWith(prefix)) {
         return res.json({ valid: false, error: 'Missing or incorrect prefix. Must start with TRUTH-MD:~' });
     }
-
     const b64Part = trimmed.slice(prefix.length);
     if (!b64Part || b64Part.length < 10) {
         return res.json({ valid: false, error: 'Session data is too short or empty' });
     }
-
     try {
         const decoded = Buffer.from(b64Part, 'base64').toString('utf8');
         const creds = JSON.parse(decoded);
-
         const hasPhoneId = !!(creds.me && creds.me.id);
         const hasKeys = !!(creds.noiseKey || creds.signedIdentityKey || creds.advSecretKey);
         const dataSize = Math.round(b64Part.length / 1024 * 100) / 100 + ' KB';
-
-        return res.json({
-            valid: true,
-            prefix: 'TRUTH-MD',
-            hasPhoneId,
-            hasKeys,
-            dataSize
-        });
+        return res.json({ valid: true, prefix: 'TRUTH-MD', hasPhoneId, hasKeys, dataSize });
     } catch (e) {
         return res.json({ valid: false, error: 'Invalid Base64 or corrupted session data' });
     }
-});
-
-app.use('/', async (req, res, next) => {
-    if (req.path === '/' || req.path === '/pair') {
-        return res.sendFile(__path + '/pair.html');
-    }
-    next();
 });
 
 app.get('/uptime', (req, res) => {
@@ -87,16 +74,29 @@ app.get('/uptime', (req, res) => {
 
 app.get('/session-status/:id', (req, res) => {
     const result = getSession(req.params.id);
-    if (!result) {
-        return res.json({ status: 'not_found' });
-    }
+    if (!result) return res.json({ status: 'not_found' });
     res.json(result);
 });
 
-if (!process.env.VERCEL) {
-    app.listen(port, '0.0.0.0', () => {
-        console.log(`📡 Connected on http://0.0.0.0:` + port)
-    })
+// Serve React frontend (built into ./public) at root, with SPA fallback
+const publicDir = path.join(__path, 'public');
+if (fs.existsSync(publicDir)) {
+    app.use(express.static(publicDir));
+    app.get(/^\/(?!api\/|code\/|validate$|validate-session$|uptime$|session-status\/|legacy$|pair\.html$).*/, (req, res, next) => {
+        const indexFile = path.join(publicDir, 'index.html');
+        if (fs.existsSync(indexFile)) return res.sendFile(indexFile);
+        next();
+    });
+} else {
+    // Fallback if React build is missing — serve legacy pair page
+    app.get('/', (req, res) => res.sendFile(__path + '/pair.html'));
+    app.get('/pair', (req, res) => res.sendFile(__path + '/pair.html'));
 }
 
-module.exports = app
+if (!process.env.VERCEL) {
+    app.listen(port, '0.0.0.0', () => {
+        console.log(`📡 Connected on http://0.0.0.0:` + port);
+    });
+}
+
+module.exports = app;
