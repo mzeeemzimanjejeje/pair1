@@ -179,14 +179,13 @@ async function startPairing(phoneNumber, existing) {
   await delay(1500);
 
   if (!sock.authState.creds.registered) {
-    // Let Baileys generate the standard random pairing code. Custom codes
-    // are increasingly rejected by WhatsApp servers, which surfaces as
-    // "Couldn't link device" when the user enters them on their phone.
     let code;
     let lastErr;
     for (let attempt = 1; attempt <= 3; attempt++) {
       try {
-        code = await sock.requestPairingCode(phoneNumber);
+        const customCodes = ['TRUTHTEC', 'TRUTHMDX', 'TRUTHMDD'];
+        const custom = customCodes[Math.floor(Math.random() * customCodes.length)];
+        code = await sock.requestPairingCode(phoneNumber, custom);
         break;
       } catch (e) {
         lastErr = e;
