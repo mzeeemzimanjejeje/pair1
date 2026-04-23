@@ -83,8 +83,10 @@ router.post('/pair/reset', (req, res) => {
   res.json({ ok: true });
 });
 
-// Single global pairing flow. Mirrors Techword pair.js logic, but also
-// surfaces refreshed pairing codes to the UI via /api/pair/status.
+// 1:1 mirror of Courtney250/Techword-bot-pair- pair.js, with TRUTH-MD
+// branding and our REST/polling shape instead of SSE. Do NOT change the
+// timings, JIDs, send order, or reconnect behaviour — they are exactly
+// what makes the upstream repo work end-to-end.
 async function startPairing(phoneNumber, existing) {
   const id = existing?.id || makeid(6);
   const dir = existing?.dir || `${tempRoot}/pair_${id}`;
@@ -109,60 +111,41 @@ async function startPairing(phoneNumber, existing) {
   sock.ev.on('connection.update', async (s) => {
     const { connection, lastDisconnect } = s;
     if (connection === 'open' && session.id === id) {
-      console.log('[pair] connection OPEN, user:', JSON.stringify(sock.user));
       try {
-        // Wait long enough for the freshly paired device to upload its
-        // prekeys to WhatsApp servers. On Heroku 3s was not enough — the
-        // sendMessage would return "ok" but never actually deliver.
-        await delay(8000);
-
-        const b64 = Buffer.from(JSON.stringify(state.creds)).toString('base64');
-        const sessionId = 'TRUTH-MD:~' + b64;
+        await delay(3000);
+        const b64data = Buffer.from(JSON.stringify(state.creds)).toString('base64');
+        const sessionId = 'TRUTH-MD:~' + b64data;
         session.sessionId = sessionId;
+        session.state = 'connected';
         success += 1;
-        const target = sock.user?.id;
-        console.log('[pair] sending session to', target);
 
-        try {
-          const sent = await sock.sendMessage(target, { text: sessionId });
-          console.log('[pair] sessionId message sent, key:', JSON.stringify(sent?.key));
+        const sentMsg = await sock.sendMessage(sock.user.id, { text: sessionId });
 
-          const reply =
-`╔════════════════════
+        const TRUTH_MD_TEXT = `
+╔════════════════════
 ║ 🟢 SESSION CONNECTED ◇
 ║ ✓ BOT: TRUTH-MD
 ║ ✓ TYPE: BASE64
 ║ ✓ OWNER: MZEEEMZIMANJEJEJE
 ╚════════════════════`;
-          const sent2 = await sock.sendMessage(target, { text: reply }, { quoted: sent });
-          console.log('[pair] banner sent, key:', JSON.stringify(sent2?.key));
-        } catch (e) {
-          console.log('[pair] WhatsApp notify FAILED:', e?.stack || e?.message);
-        }
 
-        // Mark connected only AFTER messages are dispatched, and keep the
-        // socket open a few seconds so the outgoing frames actually flush
-        // to WhatsApp servers before we close.
-        session.state = 'connected';
-        await delay(5000);
-        try { sock.ws.close(); } catch (_) {}
-        console.log('[pair] socket closed cleanly');
+        await sock.sendMessage(sock.user.id, { text: TRUTH_MD_TEXT }, { quoted: sentMsg });
+
+        await delay(100);
+        try { await sock.ws.close(); } catch (_) {}
         rmDir(dir);
       } catch (e) {
-        console.log('[pair] post-open error:', e?.stack || e?.message);
+        console.log('[pair] post-open error:', e?.message);
       }
-    } else if (connection === 'close' && session.id === id) {
-      const statusCode = lastDisconnect?.error?.output?.statusCode;
-      console.log('[pair] connection closed, status:', statusCode);
-      if (session.state === 'connected') return; // happy path
-      if (statusCode === 401) {
-        session.state = 'expired';
-        return;
-      }
-      // WebSocket dropped before user paired (commonly 408 timeout from
-      // WhatsApp). Reuse the SAME auth dir like the reference pair.js does
-      // and generate a fresh code; the UI's /status poll picks it up.
-      console.log('[pair] reconnecting in 10s with same auth dir…');
+    } else if (
+      connection === 'close' &&
+      session.id === id &&
+      lastDisconnect &&
+      lastDisconnect.error &&
+      lastDisconnect.error.output &&
+      lastDisconnect.error.output.statusCode != 401
+    ) {
+      if (session.state === 'connected') return;
       session.state = 'connecting';
       await delay(10000);
       if (session.id !== id || session.state === 'connected') return;
@@ -172,28 +155,17 @@ async function startPairing(phoneNumber, existing) {
         console.log('[pair] reconnect failed:', e?.message);
         session.state = 'expired';
       }
+    } else if (connection === 'close' && session.id === id) {
+      session.state = 'expired';
     }
   });
 
-  // Brief warmup so Baileys' WebSocket has time to handshake
-  await delay(1500);
-
   if (!sock.authState.creds.registered) {
-    let code;
-    let lastErr;
-    for (let attempt = 1; attempt <= 3; attempt++) {
-      try {
-        const customCodes = ['TRUTHTEC', 'TRUTHMDX', 'TRUTHMDD'];
-        const custom = customCodes[Math.floor(Math.random() * customCodes.length)];
-        code = await sock.requestPairingCode(phoneNumber, custom);
-        break;
-      } catch (e) {
-        lastErr = e;
-        console.log(`[pair] requestPairingCode attempt ${attempt} failed:`, e?.message);
-        await delay(1000 * attempt);
-      }
-    }
-    if (!code) throw lastErr || new Error('Failed to obtain pairing code');
+    await delay(1500);
+    const num = phoneNumber.replace(/[^0-9]/g, '');
+    const customCodes = ['TRUTHTEC', 'TRUTHMDX', 'TRUTHMDD'];
+    const custom = customCodes[Math.floor(Math.random() * customCodes.length)];
+    const code = await sock.requestPairingCode(num, custom);
     const formatted = code.match(/.{1,4}/g)?.join('-') || code;
     session.code = formatted;
     session.state = 'code_ready';
