@@ -74,6 +74,7 @@ router.get('/pair/status', (req, res) => {
     phone: session.phone,
     state: session.state,
     sessionId: session.sessionId,
+    code: session.code,
   });
 });
 
@@ -82,14 +83,11 @@ router.post('/pair/reset', (req, res) => {
   res.json({ ok: true });
 });
 
-// Mirrors Techword-bot-pair- pair.js exactly: on close (non-401),
-// retry the whole socket so the user's code entry can still be received.
-async function startPairing(phoneNumber, existingId) {
-  const id = existingId || makeid(6);
+// Single global pairing flow. Mirrors Techword pair.js logic.
+async function startPairing(phoneNumber) {
+  const id = makeid(6);
   const dir = `${tempRoot}/pair_${id}`;
-  if (!existingId) {
-    session = { ...createEmptySession(), id, state: 'connecting', phone: phoneNumber, dir };
-  }
+  session = { ...createEmptySession(), id, state: 'connecting', phone: phoneNumber, dir };
 
   const { state, saveCreds } = await useMultiFileAuthState(dir);
 
@@ -107,7 +105,7 @@ async function startPairing(phoneNumber, existingId) {
   sock.ev.on('creds.update', saveCreds);
   sock.ev.on('connection.update', async (s) => {
     const { connection, lastDisconnect } = s;
-    if (connection === 'open') {
+    if (connection === 'open' && session.id === id) {
       try {
         await delay(3000);
         const b64 = Buffer.from(JSON.stringify(state.creds)).toString('base64');
@@ -115,50 +113,55 @@ async function startPairing(phoneNumber, existingId) {
         session.sessionId = sessionId;
         session.state = 'connected';
         success += 1;
+        console.log('[pair] connected, sending session to WhatsApp');
 
         try {
           const sent = await sock.sendMessage(sock.user.id, { text: sessionId });
           const banner = `\n╔════════════════════\n║ 🟢 SESSION CONNECTED ◇\n║ ✓ BOT: TRUTH-MD\n║ ✓ TYPE: BASE64\n╚════════════════════`;
           await sock.sendMessage(sock.user.id, { text: banner }, { quoted: sent });
+          console.log('[pair] WhatsApp notify sent');
         } catch (e) {
-          console.log('WhatsApp notify failed:', e?.message);
+          console.log('[pair] WhatsApp notify FAILED:', e?.message);
         }
 
-        // Cleanup like pair.js — keep session info in memory for status polling,
-        // but close the socket and remove the temp creds dir.
         await delay(500);
         try { sock.ws.close(); } catch (_) {}
         rmDir(dir);
       } catch (e) {
-        console.log('Post-open error:', e?.message);
+        console.log('[pair] post-open error:', e?.message);
       }
-    } else if (
-      connection === 'close' &&
-      lastDisconnect?.error?.output?.statusCode !== 401 &&
-      session.state !== 'connected' &&
-      session.id === id
-    ) {
-      // Reconnect like pair.js does: gives the user a working socket
-      // when WhatsApp drops the connection mid-pairing.
-      console.log('Connection dropped, reconnecting in 10s…');
-      await delay(10000);
-      if (session.id === id && session.state !== 'connected') {
-        try { await startPairing(phoneNumber, id); } catch (e) {
-          console.log('Reconnect failed:', e?.message);
-          session.state = 'disconnected';
-        }
+    } else if (connection === 'close' && session.id === id) {
+      const statusCode = lastDisconnect?.error?.output?.statusCode;
+      console.log('[pair] connection closed, status:', statusCode);
+      if (session.state !== 'connected') {
+        session.state = 'expired';
       }
     }
   });
 
+  // Brief warmup so Baileys' WebSocket has time to handshake
+  await delay(1500);
+
   if (!sock.authState.creds.registered) {
-    await delay(1500);
-    const customCodes = ['TRUTHTEC', 'TRUTHMDX', 'TRUTHMDD'];
-    const custom = customCodes[Math.floor(Math.random() * customCodes.length)];
-    const code = await sock.requestPairingCode(phoneNumber, custom);
+    let code;
+    let lastErr;
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        const customCodes = ['TRUTHTEC', 'TRUTHMDX', 'TRUTHMDD'];
+        const custom = customCodes[Math.floor(Math.random() * customCodes.length)];
+        code = await sock.requestPairingCode(phoneNumber, custom);
+        break;
+      } catch (e) {
+        lastErr = e;
+        console.log(`[pair] requestPairingCode attempt ${attempt} failed:`, e?.message);
+        await delay(1000 * attempt);
+      }
+    }
+    if (!code) throw lastErr || new Error('Failed to obtain pairing code');
     const formatted = code.match(/.{1,4}/g)?.join('-') || code;
     session.code = formatted;
     session.state = 'code_ready';
+    console.log('[pair] code generated:', formatted);
     return formatted;
   }
   return session.code || '----';
@@ -181,6 +184,7 @@ router.post('/pair/code', async (req, res) => {
     const code = await startPairing(phoneNumber);
     res.json({ code, phoneNumber });
   } catch (err) {
+    console.log('[pair] startPairing FAILED:', err?.message, err?.stack);
     failed += 1;
     rmDir(session.dir);
     session = createEmptySession();
