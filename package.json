@@ -5,7 +5,8 @@
   "scripts": {
     "preinstall": "node ./scripts/preinstall.js",
     "build": "cd artifacts/api-server && npm install --legacy-peer-deps",
-    "heroku-postbuild": "cd artifacts/api-server && npm install --legacy-peer-deps && npm run build",
+    "heroku-postbuild": "cd artifacts/api-server && npm install --legacy-peer-deps",
+    "start": "node artifacts/api-server/index.js",
     "typecheck:libs": "tsc --build",
     "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck"
   },
@@ -21,7 +22,8 @@
     ]
   },
   "engines": {
-    "node": ">=18.x"
+    "node": "20.x",
+    "npm": ">=9.7.2"
   },
   "devDependencies": {
     "@rollup/rollup-win32-x64-msvc": "^4.60.2",

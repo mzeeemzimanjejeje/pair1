@@ -1,70 +1,326 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
-  <meta charset="UTF-8"/>
+  <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>TRUTH-MD | Session Validator</title>
+  <title>TECHWORDBOT | Session Validator</title>
+  <link rel="icon" href="/favicon.ico" type="image/x-icon">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/sweetalert/dist/sweetalert.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.0.0-alpha.1/axios.min.js"></script>
   <style>
-    :root{--primary:#7a9cc6;--accent:#5b7a99;--light:#d4dce6;--glass-bg:rgba(30,40,60,0.6);--glass-border:rgba(140,160,190,0.25)}
-    *{margin:0;padding:0;box-sizing:border-box;font-family:'Poppins',sans-serif}
-    body{background:linear-gradient(180deg,#0d1117 0%,#1a1e2e 40%,#2c3345 100%);color:var(--light);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:2rem}
-    .card{background:var(--glass-bg);border:1px solid var(--glass-border);backdrop-filter:blur(16px);border-radius:20px;padding:2.5rem;width:100%;max-width:520px;box-shadow:0 8px 32px rgba(0,0,0,0.5)}
-    h2{font-size:1.6rem;margin-bottom:.5rem;background:linear-gradient(to right,var(--primary),var(--accent));-webkit-background-clip:text;background-clip:text;color:transparent}
-    p.sub{font-size:.85rem;color:rgba(212,220,230,.6);margin-bottom:1.5rem}
-    label{display:block;font-size:.85rem;margin-bottom:.5rem}
-    textarea{width:100%;background:rgba(255,255,255,.07);border:1px solid var(--glass-border);border-radius:10px;padding:.75rem;color:var(--light);font-size:.85rem;height:120px;resize:vertical;outline:none;font-family:monospace}
-    textarea:focus{border-color:var(--accent)}
-    .btn{background:linear-gradient(135deg,var(--primary),var(--accent));border:none;border-radius:10px;padding:.75rem;color:#fff;font-weight:600;cursor:pointer;font-size:.95rem;width:100%;margin-top:1rem;transition:opacity .2s}
-    .btn:hover{opacity:.9}.btn:disabled{opacity:.5;cursor:not-allowed}
-    .result{display:none;margin-top:1.25rem;padding:1rem;border-radius:10px}
-    .result.valid{background:rgba(40,167,69,.15);border:1px solid rgba(92,184,92,.4)}
-    .result.invalid{background:rgba(220,53,69,.15);border:1px solid rgba(220,53,69,.4)}
-    .result h3{font-size:1rem;margin-bottom:.75rem}
-    .row{display:flex;justify-content:space-between;font-size:.82rem;padding:.3rem 0;border-bottom:1px solid rgba(255,255,255,.05)}
-    .ok{color:#5cb85c}.bad{color:#e05c6a}.val{color:var(--primary)}
-    .back{display:block;text-align:center;margin-top:1.25rem;color:var(--primary);text-decoration:none;font-size:.85rem}
+    :root {
+      --primary: #7a9cc6;
+      --accent:  #5b7a99;
+      --dark:    #1a1e2e;
+      --light:   #d4dce6;
+      --glass-bg: rgba(30,40,60,0.55);
+      --glass-border: rgba(140,160,190,0.25);
+      --bg-gradient: linear-gradient(180deg, #0d1117 0%, #1a1e2e 30%, #2c3345 60%, #3a4256 100%);
+    }
+    * { margin:0; padding:0; box-sizing:border-box; font-family:'Poppins',sans-serif; }
+    body {
+      background: var(--bg-gradient);
+      color: var(--light);
+      min-height:100vh;
+      display:flex; flex-direction:column;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    #particles-js {
+      position:fixed; top:0; left:0; width:100%; height:100%; z-index:0;
+    }
+
+    .navbar {
+      background: var(--glass-bg);
+      backdrop-filter: blur(12px);
+      position:fixed; top:0; width:100%; padding:1rem 2rem; z-index:1000;
+      border-bottom:1px solid var(--glass-border);
+      box-shadow: 0 4px 30px rgba(0,0,0,0.3);
+    }
+    .navbar-container {
+      max-width:1200px; margin:0 auto;
+      display:flex; justify-content:space-between; align-items:center;
+    }
+    .logo { color:var(--light); text-decoration:none; font-size:1.75rem; font-weight:700; display:flex; align-items:center; gap:0.75rem; }
+    .logo i { color:var(--accent); animation:pulse 2s infinite; }
+    .back-btn {
+      display: flex; align-items: center; gap: 0.5rem;
+      color: var(--light); text-decoration: none;
+      padding: 0.5rem 1rem; border-radius: 8px;
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.2);
+      transition: all 0.3s;
+      font-size: 0.9rem;
+    }
+    .back-btn:hover { background: var(--accent); transform: translateY(-2px); }
+
+    .main-content {
+      padding: 7rem 2rem 4rem;
+      flex: 1;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      position: relative;
+      z-index: 2;
+    }
+
+    .validator-card {
+      max-width: 550px;
+      width: 100%;
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      backdrop-filter: blur(16px);
+      border-radius: 16px;
+      padding: 2.5rem;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+      animation: fadeInUp 0.6s ease-out;
+    }
+
+    .validator-card h2 {
+      font-size: 1.8rem;
+      margin-bottom: 0.5rem;
+      background: linear-gradient(to right, var(--primary), var(--accent));
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+    }
+    .validator-card p.subtitle {
+      font-size: 0.9rem;
+      color: rgba(212,220,230,0.6);
+      margin-bottom: 1.5rem;
+    }
+
+    .input-group {
+      margin-bottom: 1.5rem;
+    }
+    .input-group label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 500;
+      margin-bottom: 0.5rem;
+      color: var(--light);
+    }
+    .input-group textarea {
+      width: 100%;
+      min-height: 120px;
+      padding: 1rem;
+      border-radius: 10px;
+      border: 1px solid var(--glass-border);
+      background: rgba(0,0,0,0.3);
+      color: var(--light);
+      font-family: 'Courier New', monospace;
+      font-size: 0.85rem;
+      resize: vertical;
+      transition: all 0.3s;
+      word-break: break-all;
+    }
+    .input-group textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 15px rgba(91,122,153,0.3);
+    }
+    .input-group textarea::placeholder {
+      color: rgba(212,220,230,0.3);
+    }
+
+    .validate-btn {
+      width: 100%;
+      padding: 0.9rem;
+      border: none;
+      border-radius: 10px;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      color: #fff;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+    .validate-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(91,122,153,0.4);
+    }
+    .validate-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .result-box {
+      margin-top: 1.5rem;
+      padding: 1.2rem;
+      border-radius: 10px;
+      display: none;
+      animation: fadeInUp 0.4s ease-out;
+    }
+    .result-box.valid {
+      background: rgba(34,197,94,0.15);
+      border: 1px solid rgba(34,197,94,0.4);
+    }
+    .result-box.invalid {
+      background: rgba(239,68,68,0.15);
+      border: 1px solid rgba(239,68,68,0.4);
+    }
+    .result-box .result-header {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      font-weight: 600;
+      font-size: 1.05rem;
+      margin-bottom: 0.8rem;
+    }
+    .result-box.valid .result-header { color: #22c55e; }
+    .result-box.invalid .result-header { color: #ef4444; }
+    .result-box .result-header i { font-size: 1.2rem; }
+
+    .result-details {
+      font-size: 0.85rem;
+      color: rgba(212,220,230,0.8);
+    }
+    .result-details .detail-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.4rem 0;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+    .result-details .detail-row:last-child { border-bottom: none; }
+    .detail-label { color: rgba(212,220,230,0.5); }
+    .detail-value { font-weight: 500; font-family: 'Courier New', monospace; }
+    .detail-value.valid-text { color: #22c55e; }
+    .detail-value.invalid-text { color: #ef4444; }
+
+    footer {
+      background: var(--glass-bg);
+      backdrop-filter: blur(12px);
+      border-top: 4px solid var(--accent);
+      padding: 1.5rem 2rem;
+      text-align: center;
+      font-size: 0.9rem;
+      color: var(--light);
+      position: relative;
+      z-index: 2;
+      margin-top: auto;
+    }
+    footer span { color: var(--accent); font-weight: 600; }
+
+    @keyframes fadeInUp { from{opacity:0;transform:translateY(20px);} to{opacity:1;transform:translateY(0);} }
+    @keyframes pulse { 0%,100%{transform:scale(1);} 50%{transform:scale(1.1);} }
+
+    @media (max-width: 768px) {
+      .validator-card { padding: 1.5rem; }
+      .validator-card h2 { font-size: 1.4rem; }
+      .navbar-container { flex-direction: column; gap: 1rem; }
+    }
   </style>
 </head>
 <body>
-  <div class="card">
-    <h2><i class="fas fa-shield-alt"></i> Session Validator</h2>
-    <p class="sub">Paste your TRUTH-MD session ID to validate it</p>
-    <label>Session ID</label>
-    <textarea id="sessionInput" placeholder="TRUTH-MD:~..."></textarea>
-    <button class="btn" id="validateBtn" onclick="validate()"><i class="fas fa-check-circle"></i> Validate Session</button>
-    <div class="result" id="result">
-      <h3 id="resultHeader"></h3>
-      <div id="resultDetails"></div>
+  <div id="particles-js"></div>
+
+  <header class="navbar">
+    <div class="navbar-container">
+      <a href="/" class="logo"><i class="fas fa-robot"></i> TECHWORD BOTS</a>
+      <a href="/" class="back-btn"><i class="fas fa-arrow-left"></i> Back to Pairing</a>
     </div>
-    <a class="back" href="/"><i class="fas fa-arrow-left"></i> Back to Pairing</a>
-  </div>
+  </header>
+
+  <main class="main-content">
+    <div class="validator-card">
+      <h2><i class="fas fa-shield-alt"></i> Session Validator</h2>
+      <p class="subtitle">Paste your session ID below to verify it's valid and ready to use.</p>
+
+      <div class="input-group">
+        <label for="session-input"><i class="fas fa-key"></i> Session ID</label>
+        <textarea id="session-input" placeholder="TRUTH-MD:~eyJ..."></textarea>
+      </div>
+
+      <button class="validate-btn" id="validate-btn">
+        <i class="fas fa-check-circle"></i> Validate Session
+      </button>
+
+      <div class="result-box" id="result-box">
+        <div class="result-header" id="result-header"></div>
+        <div class="result-details" id="result-details"></div>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <p>&copy; <span id="currentYear"></span> <span>TECHWORD BOTS</span> &mdash; All Rights Reserved</p>
+  </footer>
+
   <script>
-    async function validate(){
-      const raw=document.getElementById('sessionInput').value.trim();
-      if(!raw){swal('Error','Please paste your session ID.','error');return}
-      const btn=document.getElementById('validateBtn');
-      btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Validating...';
-      try{
-        const resp=await fetch('/validate-session',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:raw})});
-        const data=await resp.json();
-        const box=document.getElementById('result');
-        box.style.display='block';
-        if(data.valid){
-          box.className='result valid';
-          document.getElementById('resultHeader').innerHTML='<i class="fas fa-check-circle" style="color:#5cb85c"></i> Valid Session ID';
-          document.getElementById('resultDetails').innerHTML=`<div class="row"><span>Status</span><span class="ok">Valid</span></div><div class="row"><span>Prefix</span><span class="val">${data.prefix}</span></div><div class="row"><span>Phone ID</span><span class="${data.hasPhoneId?'ok':'bad'}">${data.hasPhoneId?'Present':'Missing'}</span></div><div class="row"><span>Auth Keys</span><span class="${data.hasKeys?'ok':'bad'}">${data.hasKeys?'Present':'Missing'}</span></div><div class="row"><span>Data Size</span><span class="val">${data.dataSize}</span></div>`;
-          swal('Valid!','Session ID is properly formatted.','success');
-        }else{
-          box.className='result invalid';
-          document.getElementById('resultHeader').innerHTML='<i class="fas fa-times-circle" style="color:#e05c6a"></i> Invalid Session ID';
-          document.getElementById('resultDetails').innerHTML=`<div class="row"><span>Status</span><span class="bad">Invalid</span></div><div class="row"><span>Reason</span><span class="bad">${data.error}</span></div>`;
-          swal('Invalid',data.error,'error');
+    particlesJS("particles-js", {
+      particles: { number:{value:30}, color:{value:"#5b7a99"}, size:{value:1.5}, line_linked:{enable:true,distance:120,color:"#5b7a99",opacity:0.15,width:1}, move:{enable:true,speed:0.4,out_mode:"out"}, opacity:{value:0.25} },
+      interactivity:{ events:{onhover:{enable:true,mode:"grab"}}, modes:{grab:{distance:150,line_linked:{opacity:0.2}}} }, retina_detect:true
+    });
+
+    document.getElementById('currentYear').textContent = new Date().getFullYear();
+
+    const sessionInput = document.getElementById('session-input');
+    const validateBtn = document.getElementById('validate-btn');
+    const resultBox = document.getElementById('result-box');
+    const resultHeader = document.getElementById('result-header');
+    const resultDetails = document.getElementById('result-details');
+
+    validateBtn.addEventListener('click', async () => {
+      const raw = sessionInput.value.trim();
+
+      if (!raw) {
+        swal("Missing Input", "Please paste your session ID to validate.", "warning");
+        return;
+      }
+
+      validateBtn.disabled = true;
+      validateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Validating...';
+
+      try {
+        const resp = await fetch('/validate-session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sessionId: raw })
+        });
+        const data = await resp.json();
+        showResult(data);
+      } catch (err) {
+        showResult({ valid: false, error: 'Server error. Please try again.' });
+      }
+
+      validateBtn.disabled = false;
+      validateBtn.innerHTML = '<i class="fas fa-check-circle"></i> Validate Session';
+    });
+
+    function showResult(data) {
+      resultBox.style.display = 'block';
+      resultBox.className = 'result-box ' + (data.valid ? 'valid' : 'invalid');
+
+      if (data.valid) {
+        resultHeader.innerHTML = '<i class="fas fa-check-circle"></i> Valid Session ID';
+        let details = '';
+        details += `<div class="detail-row"><span class="detail-label">Status</span><span class="detail-value valid-text">Valid</span></div>`;
+        details += `<div class="detail-row"><span class="detail-label">Prefix</span><span class="detail-value">${data.prefix || 'TRUTH-MD'}</span></div>`;
+        details += `<div class="detail-row"><span class="detail-label">Format</span><span class="detail-value valid-text">Base64 Encoded</span></div>`;
+        if (data.hasPhoneId) {
+          details += `<div class="detail-row"><span class="detail-label">Phone ID</span><span class="detail-value valid-text">Present</span></div>`;
         }
-      }catch(e){swal('Error','Server error. Please try again.','error')}
-      btn.disabled=false;btn.innerHTML='<i class="fas fa-check-circle"></i> Validate Session';
+        if (data.hasKeys) {
+          details += `<div class="detail-row"><span class="detail-label">Auth Keys</span><span class="detail-value valid-text">Present</span></div>`;
+        }
+        details += `<div class="detail-row"><span class="detail-label">Data Size</span><span class="detail-value">${data.dataSize || 'N/A'}</span></div>`;
+        resultDetails.innerHTML = details;
+        swal("Valid!", "This session ID is properly formatted and ready to use.", "success");
+      } else {
+        resultHeader.innerHTML = '<i class="fas fa-times-circle"></i> Invalid Session ID';
+        let details = '';
+        details += `<div class="detail-row"><span class="detail-label">Status</span><span class="detail-value invalid-text">Invalid</span></div>`;
+        details += `<div class="detail-row"><span class="detail-label">Reason</span><span class="detail-value invalid-text">${data.error || 'Unknown error'}</span></div>`;
+        resultDetails.innerHTML = details;
+        swal("Invalid", data.error || "This session ID is not valid.", "error");
+      }
     }
   </script>
 </body>

@@ -5,7 +5,7 @@ const fs = require('fs');
 let router = express.Router();
 const pino = require('pino');
 const {
-    default: makeWASocket,
+    default: xhypher_Tech,
     useMultiFileAuthState,
     delay,
     makeCacheableSignalKeyStore,
@@ -36,10 +36,10 @@ router.get('/', async (req, res) => {
 
     const tempDir = process.env.VERCEL ? '/tmp' : './temp';
 
-    async function startPairing() {
-        const { state, saveCreds } = await useMultiFileAuthState(`${tempDir}/${id}`);
+    async function xhypher_MD_PAIR_CODE() {
+        const { state, saveCreds } = await useMultiFileAuthState(tempDir + '/' + id);
         try {
-            const sock = makeWASocket({
+            let Pair_Code_By_xhypher_Tech = xhypher_Tech({
                 auth: {
                     creds: state.creds,
                     keys: makeCacheableSignalKeyStore(state.keys, pino({ level: 'fatal' }).child({ level: 'fatal' })),
@@ -50,54 +50,68 @@ router.get('/', async (req, res) => {
             });
 
             setSession(id, { status: 'waiting' });
-            sock.ev.on('creds.update', saveCreds);
 
-            sock.ev.on('connection.update', async (s) => {
+            Pair_Code_By_xhypher_Tech.ev.on('creds.update', saveCreds);
+            Pair_Code_By_xhypher_Tech.ev.on('connection.update', async (s) => {
                 const { connection, lastDisconnect } = s;
                 if (connection === 'open') {
                     try {
-                        await delay(8000);
-                        const b64data = Buffer.from(JSON.stringify(state.creds)).toString('base64');
-                        const sessionId = 'TRUTH-MD:~' + b64data;
+                        await delay(3000);
+                        let b64data = Buffer.from(JSON.stringify(state.creds)).toString('base64');
+                        let sessionId = 'TRUTH-MD:~' + b64data;
+
                         setSession(id, { status: 'connected', sessionId });
-                        const rawJid = sock.user.id;
-                        const jid = rawJid.split(':')[0] + '@s.whatsapp.net';
-                        const session = await sock.sendMessage(jid, { text: sessionId });
-                        await sock.sendMessage(jid, {
-                            text: `╔════════════════════\n║ 🟢 SESSION CONNECTED\n║ ✓ BOT: TRUTH-MD\n║ ✓ TYPE: BASE64\n║ ✓ PREFIX: TRUTH-MD:~\n╚════════════════════`
-                        }, { quoted: session });
+
+                        let session = await Pair_Code_By_xhypher_Tech.sendMessage(Pair_Code_By_xhypher_Tech.user.id, { text: sessionId });
+
+                        let xhypher_MD_TEXT = `
+╔════════════════════
+║ 🟢 SESSION CONNECTED ◇
+║ ✓ BOT: TECHWORD-X
+║ ✓ TYPE: BASE64
+║ ✓ OWNER: COURTNEY 🦅 
+║ ✓SUPPORT: https://t.me/Courtney254
+╚════════════════════`;
+
+                        await Pair_Code_By_xhypher_Tech.sendMessage(Pair_Code_By_xhypher_Tech.user.id, { text: xhypher_MD_TEXT }, { quoted: session });
+
                         send('session', { sessionId });
                     } catch (e) {
+                        console.log('Error sending session:', e.message);
                         send('error', { message: e.message });
                         setSession(id, { status: 'error', error: e.message });
                     }
+
                     setTimeout(() => { deleteSession(id); }, 300000);
+
                     await delay(100);
                     res.end();
-                    await sock.ws.close();
-                    return await removeFile(`${tempDir}/${id}`);
-                } else if (connection === 'close' && lastDisconnect?.error?.output?.statusCode !== 401) {
+                    await Pair_Code_By_xhypher_Tech.ws.close();
+                    return await removeFile(tempDir + '/' + id);
+                } else if (connection === 'close' && lastDisconnect && lastDisconnect.error && lastDisconnect.error.output && lastDisconnect.error.output.statusCode != 401) {
                     await delay(10000);
-                    startPairing();
+                    xhypher_MD_PAIR_CODE();
                 }
             });
 
-            if (!sock.authState.creds.registered) {
+            if (!Pair_Code_By_xhypher_Tech.authState.creds.registered) {
                 await delay(1500);
                 num = num.replace(/[^0-9]/g, '');
-                const code = await sock.requestPairingCode(num);
-                const formatted = code?.match(/.{1,4}/g)?.join('-') || code;
+                const customCodes = ["TECHWORD", "COURTNEY", "TRUTHTRU"];
+                const custom = customCodes[Math.floor(Math.random() * customCodes.length)];
+                const code = await Pair_Code_By_xhypher_Tech.requestPairingCode(num, custom);
+                const formatted = code.match(/.{1,4}/g)?.join('-') || code;
                 send('code', { code: formatted });
             }
         } catch (err) {
             console.log('Pairing error:', err.message || err);
-            await removeFile(`${tempDir}/${id}`);
+            await removeFile(tempDir + '/' + id);
             send('error', { message: 'Service Currently Unavailable' });
             res.end();
         }
     }
 
-    return await startPairing();
+    return await xhypher_MD_PAIR_CODE();
 });
 
 module.exports = router;

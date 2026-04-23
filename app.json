@@ -1,22 +1,22 @@
 {
-  "name": "TRUTH-MD Pairing",
-  "description": "TRUTH-MD WhatsApp Session Pairing Server",
-  "keywords": ["whatsapp", "pairing", "truth-md", "bot"],
+  "name": "TRUTH-MD Pair",
+  "description": "WhatsApp session pairing service",
+  "keywords": ["TRUTH-MD", "WhatsApp", "Baileys", "Pair"],
+  "success_url": "/",
   "stack": "heroku-24",
   "buildpacks": [
-    {
-      "url": "heroku/nodejs"
-    }
+    { "url": "heroku/nodejs" }
   ],
-  "formation": {
-    "web": {
-      "quantity": 1,
-      "size": "basic"
-    }
-  },
   "env": {
+    "PORT": {
+      "description": "Port the web app listens on",
+      "value": "5000",
+      "required": false
+    },
     "NODE_ENV": {
-      "value": "production"
+      "description": "Node environment",
+      "value": "production",
+      "required": false
     }
   }
 }

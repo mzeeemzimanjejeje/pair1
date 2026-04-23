@@ -1,549 +1,1110 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
-  <meta charset="UTF-8"/>
+  <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>TRUTH-MD | WhatsApp Pairing</title>
+  <title> TECHWORDBOT  | PAIR CODE</title>
+  <!-- Favicon -->
+  <link rel="icon" href="/favicon.ico" type="image/x-icon">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">  
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/sweetalert/dist/sweetalert.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.0.0-alpha.1/axios.min.js"></script>
   <style>
     :root {
-      --cx-primary: #00f0ff;
-      --cx-secondary: #ff00e4;
-      --cx-accent: #7c3aed;
-      --cx-dark: #0a0a14;
-      --cx-darker: #05050c;
-      --cx-light: rgba(255, 255, 255, 0.9);
-      --cx-glass: rgba(20, 20, 40, 0.6);
-      --cx-error: #ff3860;
-      --cx-success: #2ecc71;
-      --cx-border: rgba(0, 240, 255, 0.2);
-      --cx-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+      --primary: #7a8fa6;
+      --accent:  #5b7a99;
+      --dark:    #1a1e2e;
+      --light:   #d4dce6;
+      --glass-bg: rgba(30,40,60,0.55);
+      --glass-border: rgba(140,160,190,0.25);
+      --transition: all 0.3s ease-in-out;
+      --rain: rgba(174,194,224,0.3);
+      --bg-gradient: linear-gradient(180deg, #0d1117 0%, #1a1e2e 30%, #2c3345 60%, #3a4256 100%);
     }
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body.sunny {
+      --primary: #f0a500;
+      --accent:  #e07b00;
+      --dark:    #1a1000;
+      --light:   #fff5e0;
+      --glass-bg: rgba(60,40,10,0.45);
+      --glass-border: rgba(240,180,80,0.3);
+      --rain: transparent;
+      --bg-gradient: linear-gradient(180deg, #1a1000 0%, #2d1f05 25%, #3d2a08 50%, #4a340c 75%, #55400f 100%);
+    }
+    body.snow {
+      --primary: #a8c8e8;
+      --accent:  #6ba3d6;
+      --dark:    #0e1a2a;
+      --light:   #e8f0fa;
+      --glass-bg: rgba(20,35,60,0.5);
+      --glass-border: rgba(160,200,240,0.25);
+      --rain: rgba(200,220,255,0.3);
+      --bg-gradient: linear-gradient(180deg, #0a1220 0%, #132238 30%, #1a3050 60%, #243d5c 100%);
+    }
+    body.forest {
+      --primary: #5a9e6f;
+      --accent:  #3d7a4f;
+      --dark:    #0a1a0f;
+      --light:   #d5eadc;
+      --glass-bg: rgba(15,40,20,0.55);
+      --glass-border: rgba(90,160,110,0.25);
+      --rain: transparent;
+      --bg-gradient: linear-gradient(180deg, #060e08 0%, #0a1a0f 25%, #122618 50%, #1a3322 75%, #224028 100%);
+    }
+    * { margin:0; padding:0; box-sizing:border-box; font-family:'Poppins',sans-serif; transition:var(--transition); }
     body {
-      background: #0f172a !important;
-      font-family: 'Space Grotesk', sans-serif;
-      min-height: 100vh;
+      background: var(--bg-gradient);
+      color: var(--light);
+      min-height:100vh;
+      display:flex; flex-direction:column;
+      position: relative;
       overflow-x: hidden;
-      color: rgba(255,255,255,0.9);
+    }
+    body::before, body::after {
+      content: '';
+      position: fixed;
+      top:0; bottom:0;
+      width:4px;
+      z-index:999;
+      opacity: 0.6;
+    }
+    body.rainy::before, body.rainy::after {
+      background: linear-gradient(180deg, transparent, var(--rain), var(--accent), var(--rain), transparent);
+      animation: slideDown 6s infinite linear;
+    }
+    body.rainy::after { animation-delay: 3s; }
+    body.sunny::before, body.sunny::after {
+      background: linear-gradient(180deg, transparent, rgba(240,165,0,0.3), var(--accent), rgba(240,165,0,0.3), transparent);
+      animation: slideDown 8s infinite linear;
+    }
+    body.sunny::after { animation-delay: 4s; }
+    body.snow::before, body.snow::after {
+      background: linear-gradient(180deg, transparent, rgba(200,220,255,0.4), var(--accent), rgba(200,220,255,0.4), transparent);
+      animation: slideDown 10s infinite linear;
+    }
+    body.snow::after { animation-delay: 5s; }
+    body.forest::before, body.forest::after {
+      background: linear-gradient(180deg, transparent, rgba(90,160,110,0.25), var(--accent), rgba(90,160,110,0.25), transparent);
+      animation: slideDown 12s infinite linear;
+    }
+    body.forest::after { animation-delay: 6s; }
+    body::before { left:0; }
+    body::after { right:0; }
+    @keyframes slideDown { 0%{transform: translateY(-100%);} 100%{transform: translateY(100%);} }
+
+    #rain-canvas {
+      position: fixed; top:0; left:0; width:100%; height:100%; z-index:1; pointer-events:none;
     }
 
-    .cx-bg-animation {
-      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-      z-index: 0; overflow: hidden; pointer-events: none; background: #0f172a;
-    }
-    .cx-aurora-layer {
-      position: absolute; width: 200%; height: 200%; opacity: 0.12;
-      animation: cxAuroraFloat 20s ease-in-out infinite;
-    }
-    .cx-aurora-1 { background: linear-gradient(45deg, transparent, #6366f1, transparent); animation-delay: 0s; transform: rotate(0deg); }
-    .cx-aurora-2 { background: linear-gradient(135deg, transparent, #8b5cf6, transparent); animation-delay: -7s; transform: rotate(120deg); }
-    .cx-aurora-3 { background: linear-gradient(225deg, transparent, #06b6d4, transparent); animation-delay: -14s; transform: rotate(240deg); }
-    @keyframes cxAuroraFloat {
-      0%, 100% { transform: translateX(-50%) translateY(-50%) rotate(0deg) scale(1); }
-      33% { transform: translateX(-40%) translateY(-60%) rotate(120deg) scale(1.1); }
-      66% { transform: translateX(-60%) translateY(-40%) rotate(240deg) scale(0.9); }
+    #particles-js {
+      position:fixed; top:0; left:0; width:100%; height:100%; z-index:0;
     }
 
-    .cx-cyber-grid {
-      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-      background: linear-gradient(rgba(99,102,241,0.03) 1px, transparent 1px),
-                  linear-gradient(90deg, rgba(99,102,241,0.03) 1px, transparent 1px);
-      background-size: 50px 50px; z-index: 0; pointer-events: none;
+    .cloud {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(20px);
+      z-index: 0;
+      pointer-events: none;
+      transition: opacity 1.5s, background 1.5s;
+    }
+    body.rainy .cloud {
+      background: radial-gradient(ellipse at center, rgba(80,95,120,0.6) 0%, rgba(50,60,80,0.2) 60%, transparent 80%);
+      opacity: 1;
+    }
+    body.sunny .cloud {
+      background: radial-gradient(ellipse at center, rgba(255,220,120,0.15) 0%, rgba(255,200,80,0.05) 60%, transparent 80%);
+      opacity: 0.4;
+    }
+    body.snow .cloud {
+      background: radial-gradient(ellipse at center, rgba(160,190,230,0.5) 0%, rgba(120,150,200,0.2) 60%, transparent 80%);
+      opacity: 0.9;
+    }
+    body.forest .cloud {
+      background: radial-gradient(ellipse at center, rgba(40,80,50,0.4) 0%, rgba(30,60,35,0.15) 60%, transparent 80%);
+      opacity: 0.6;
+    }
+    .cloud-1 { width:500px; height:150px; top:20px; left:-50px; animation: driftCloud 40s linear infinite; }
+    .cloud-2 { width:600px; height:180px; top:60px; right:-100px; animation: driftCloud 55s linear infinite reverse; opacity:0.7; }
+    .cloud-3 { width:450px; height:130px; top:10px; left:30%; animation: driftCloud 45s 10s linear infinite; opacity:0.5; }
+    @keyframes driftCloud { 0%{transform:translateX(-10%);} 50%{transform:translateX(10%);} 100%{transform:translateX(-10%);} }
+
+    #sun-glow {
+      position: fixed;
+      top: -80px;
+      right: 10%;
+      width: 250px;
+      height: 250px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255,200,60,0.7) 0%, rgba(255,160,20,0.3) 40%, transparent 70%);
+      z-index: 0;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 1.5s;
+      animation: sunPulse 4s ease-in-out infinite;
+    }
+    body.sunny #sun-glow { opacity: 1; }
+    @keyframes sunPulse { 0%,100%{transform:scale(1);box-shadow:0 0 80px rgba(255,180,40,0.3);} 50%{transform:scale(1.08);box-shadow:0 0 120px rgba(255,180,40,0.5);} }
+
+    #forest-glow {
+      position: fixed;
+      bottom: -60px;
+      left: 0;
+      width: 100%;
+      height: 200px;
+      background: linear-gradient(0deg, rgba(30,80,40,0.4) 0%, rgba(20,60,30,0.15) 50%, transparent 100%);
+      z-index: 0;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 1.5s;
+    }
+    body.forest #forest-glow { opacity: 1; }
+
+    .season-toggle {
+      position: fixed;
+      bottom: 80px;
+      right: 20px;
+      z-index: 1001;
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      backdrop-filter: blur(12px);
+      border-radius: 50px;
+      padding: 0.5rem 1rem;
+      color: var(--light);
+      cursor: pointer;
+      font-size: 1.2rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      transition: var(--transition);
+    }
+    .season-toggle:hover {
+      transform: scale(1.05);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    }
+    .music-toggle {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      z-index: 1001;
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      backdrop-filter: blur(12px);
+      border-radius: 50%;
+      width: 48px;
+      height: 48px;
+      color: var(--light);
+      cursor: pointer;
+      font-size: 1.2rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: var(--transition);
+    }
+    .music-toggle:hover {
+      transform: scale(1.1);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.35);
+    }
+    .music-toggle.playing {
+      border-color: var(--accent);
+      color: var(--accent);
+      animation: musicPulse 1.5s ease-in-out infinite;
+    }
+    @keyframes musicPulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(91,122,153,0.5); }
+      50%       { box-shadow: 0 0 0 10px rgba(91,122,153,0); }
+    }
+    .season-label {
+      font-size: 0.75rem;
+      font-weight: 500;
+    }
+    
+    /* Navbar */
+    .navbar {
+      background: var(--glass-bg);
+      backdrop-filter: blur(12px);
+      position:fixed; top:0; width:100%; padding:1rem 2rem; z-index:1000;
+      border-bottom:1px solid var(--glass-border);
+      box-shadow: 0 4px 30px rgba(0,0,0,0.3);
+    }
+    .navbar-container {
+      max-width:1200px; margin:0 auto;
+      display:flex; justify-content:space-between; align-items:center;
+    }
+    .logo { color:var(--light); text-decoration:none; font-size:1.75rem; font-weight:700; display:flex; align-items:center; gap:0.75rem; }
+    .logo i { color:var(--accent); animation:pulse 2s infinite; }
+    
+    /* Social icons */
+    .social-icons {
+      display: flex;
+      gap: 1rem;
+    }
+    .social-icons a {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.1);
+      color: var(--light);
+      text-decoration: none;
+      font-size: 1.2rem;
+      transition: var(--transition);
+      border: 1px solid rgba(255,255,255,0.2);
+    }
+    .social-icons a:hover {
+      background: var(--accent);
+      color: #fff;
+      transform: translateY(-3px);
+      box-shadow: 0 5px 15px rgba(91,122,153,0.5);
     }
 
-    .cx-particles { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
-    .cx-particle {
-      position: absolute; width: 3px; height: 3px; background: #00f0ff;
-      border-radius: 50%; opacity: 0.6; animation: cxFloatUp 20s infinite linear;
-      box-shadow: 0 0 10px #00f0ff;
+    /* Hero */
+    .hero { padding:8rem 2rem 4rem; text-align:center; }
+    .hero h1 {
+      font-size:3rem;
+      background:linear-gradient(to right,var(--primary),var(--accent));
+      -webkit-background-clip:text; background-clip:text; color:transparent;
+      animation: glowText 2s ease-in-out infinite alternate;
     }
-    @keyframes cxFloatUp {
-      0% { transform: translateY(100vh) translateX(0) scale(0); opacity: 0; }
-      10% { opacity: 0.6; transform: scale(1); }
-      90% { opacity: 0.6; }
-      100% { transform: translateY(-100vh) translateX(100px) scale(0); opacity: 0; }
+    @keyframes glowText {
+      from { text-shadow: 0 0 10px var(--primary); }
+      to   { text-shadow: 0 0 20px var(--accent); }
     }
-
-    .cx-main-container {
-      display: flex; min-height: 100vh; padding: 20px; gap: 30px;
-      align-items: center; justify-content: center; flex-wrap: wrap;
-      position: relative; z-index: 1;
-    }
-
-    .cx-stats-panel {
-      width: 320px; background: rgba(20,20,40,0.6); border-radius: 24px;
-      backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-      border: 1px solid rgba(0,240,255,0.2); padding: 30px;
-      box-shadow: 0 20px 40px rgba(0,0,0,0.3); position: relative; overflow: hidden;
-    }
-    .cx-stats-panel::before {
-      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
-      background: linear-gradient(90deg, transparent, #00f0ff, transparent);
-      animation: cxShimmer 3s ease-in-out infinite;
-    }
-    @keyframes cxShimmer { 0%, 100% { opacity: 0; } 50% { opacity: 1; } }
-
-    .cx-stats-header {
-      display: flex; align-items: center; gap: 12px; margin-bottom: 25px;
-      padding-bottom: 15px; border-bottom: 1px solid rgba(255,255,255,0.1);
-    }
-    .cx-stats-icon {
-      width: 40px; height: 40px; background: linear-gradient(135deg, #00f0ff, #ff00e4);
-      border-radius: 12px; display: flex; align-items: center; justify-content: center;
-      color: #0a0a14; font-size: 18px; font-weight: 600;
-    }
-    .cx-stats-title { color: rgba(255,255,255,0.9); font-size: 1.2rem; font-weight: 600; letter-spacing: 0.5px; }
-
-    .cx-stat-item {
-      display: flex; justify-content: space-between; align-items: center;
-      padding: 15px 0; border-bottom: 1px solid rgba(255,255,255,0.05);
-    }
-    .cx-stat-item:last-child { border-bottom: none; }
-    .cx-stat-label { color: rgba(255,255,255,0.7); font-size: 0.9rem; display: flex; align-items: center; gap: 8px; }
-    .cx-stat-value { color: #00f0ff; font-weight: 600; font-family: 'JetBrains Mono', monospace; font-size: 1rem; }
-    .cx-status-indicator {
-      width: 8px; height: 8px; background: #2ecc71; border-radius: 50%;
-      animation: cxPulse 2s infinite;
-    }
-    @keyframes cxPulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.7; transform: scale(1.2); } }
-
-    .cx-container {
-      width: 420px; background: rgba(20,20,40,0.6); border-radius: 24px;
-      backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-      border: 1px solid rgba(0,240,255,0.2); box-shadow: 0 20px 40px rgba(0,0,0,0.3);
-      padding: 40px; position: relative; overflow: hidden;
-      transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    .typing-text {
+      display:inline-block; overflow:hidden; white-space:nowrap;
+      border-right:3px solid var(--accent);
+      animation:typing 3.5s steps(40,end), blink-caret 0.75s step-end infinite;
+      letter-spacing:2px; font-size:1.3rem; margin-top:1rem;
     }
 
-    .cx-header { text-align: center; margin-bottom: 35px; }
-    .cx-title {
-      font-size: 2.4rem; font-weight: 700;
-      background: linear-gradient(135deg, #00f0ff 0%, #ff00e4 50%, #7c3aed 100%);
-      -webkit-background-clip: text; background-clip: text;
-      -webkit-text-fill-color: transparent; color: transparent;
-      letter-spacing: 1px; margin-bottom: 8px; display: block;
+    /* Analytics Section */
+    .analytics-section {
+      padding: 2rem;
+      max-width: 1200px;
+      margin: 0 auto;
+      width: 100%;
     }
-    .cx-subtitle { color: rgba(255,255,255,0.8); font-size: 1rem; font-weight: 400; letter-spacing: 0.5px; }
-
-    .cx-status-badge {
-      display: flex; align-items: center; gap: 8px; padding: 8px 14px;
-      border-radius: 20px; font-size: 0.8rem; font-family: 'JetBrains Mono', monospace;
-      font-weight: 500; margin: 0 auto 14px; width: fit-content;
-      border: 1px solid transparent; transition: all 0.3s;
+    .analytics-section h2 {
+      text-align: center;
+      font-size: 2.5rem;
+      margin-bottom: 2rem;
+      color: var(--accent);
+      position: relative;
+      display: inline-block;
+      left: 50%;
+      transform: translateX(-50%);
     }
-    .cx-badge-idle { background: rgba(0,240,255,0.08); border-color: rgba(0,240,255,0.2); color: #00f0ff; }
-    .cx-badge-busy { background: rgba(180,100,255,0.12); border-color: rgba(180,100,255,0.3); color: #b464ff; }
-    .cx-badge-ok { background: rgba(46,204,113,0.15); border-color: rgba(46,204,113,0.4); color: #2ecc71; }
-    .cx-badge-err { background: rgba(255,56,96,0.1); border-color: rgba(255,56,96,0.3); color: #ff3860; max-width: 100%; text-align: center; flex-wrap: wrap; justify-content: center; }
-
-    .cx-input-field { position: relative; margin-bottom: 20px; }
-    .cx-input-field input {
-      width: 100%; padding: 18px 24px; background: rgba(0,0,0,0.4);
-      border: 2px solid rgba(0,240,255,0.2); border-radius: 16px;
-      color: rgba(255,255,255,0.9); font-size: 1.1rem;
-      font-family: 'JetBrains Mono', monospace;
-      transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
-      backdrop-filter: blur(10px); outline: none; display: block;
+    .analytics-section h2::after {
+      content: '';
+      position: absolute;
+      bottom: -10px;
+      left: 0;
+      width: 100%;
+      height: 3px;
+      background: var(--accent);
+      border-radius: 2px;
     }
-    .cx-input-field input:focus { border-color: #00f0ff; box-shadow: 0 0 0 4px rgba(0,240,255,0.1); background: rgba(0,0,0,0.6); }
-    .cx-input-field input::placeholder { color: rgba(255,255,255,0.3); }
-
-    .cx-btn {
-      width: 100%; padding: 18px; background: linear-gradient(135deg, #00f0ff, #ff00e4);
-      border: none; border-radius: 16px; color: #0a0a14; font-weight: 700;
-      font-size: 1.1rem; font-family: 'Space Grotesk', sans-serif; cursor: pointer;
-      transition: all 0.3s cubic-bezier(0.4,0,0.2,1); position: relative;
-      overflow: hidden; text-transform: uppercase; letter-spacing: 1px;
+    .analytics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 2rem;
+      margin-bottom: 4rem;
     }
-    .cx-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(0,240,255,0.4); }
-    .cx-btn:active:not(:disabled) { transform: translateY(0); }
-    .cx-btn:disabled { opacity: 0.7; cursor: not-allowed; }
-
-    .cx-loading { text-align: center; margin: 25px 0; }
-    .cx-spinner {
-      width: 60px; height: 60px; border: 3px solid transparent; border-top-color: #00f0ff;
-      border-radius: 50%; animation: cxSpin 1s linear infinite; position: relative; margin: 0 auto 20px;
+    .analytics-card {
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      border-radius: 20px;
+      padding: 2rem;
+      backdrop-filter: blur(16px);
+      box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+      transition: var(--transition);
     }
-    .cx-spinner::before, .cx-spinner::after {
-      content: ''; position: absolute; border-radius: 50%; border: 3px solid transparent;
+    .analytics-card:hover {
+      transform: translateY(-10px);
+      box-shadow: 0 15px 40px rgba(91,122,153,0.3);
     }
-    .cx-spinner::before { top: 6px; left: 6px; right: 6px; bottom: 6px; border-top-color: #ff00e4; animation: cxSpin 1.5s linear infinite reverse; }
-    .cx-spinner::after { top: 12px; left: 12px; right: 12px; bottom: 12px; border-top-color: #7c3aed; animation: cxSpin 2s linear infinite; }
-    @keyframes cxSpin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-    .cx-loading-text { color: #00f0ff; font-weight: 600; font-size: 1rem; text-transform: uppercase; letter-spacing: 1px; }
-
-    .cx-result {
-      margin-top: 22px; background: linear-gradient(135deg, rgba(60,20,120,0.45), rgba(20,40,100,0.45));
-      border: 1px solid rgba(140,80,255,0.35); border-radius: 20px;
-      padding: 24px 22px 20px; text-align: center; animation: cxFadeInUp 0.4s ease forwards;
+    .analytics-card h3 {
+      color: var(--accent);
+      font-size: 1.8rem;
+      margin-bottom: 1.5rem;
+      text-align: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
     }
-    @keyframes cxFadeInUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
-    .cx-result-label {
-      color: #00f0ff; font-size: 0.88rem; font-weight: 600; margin-bottom: 14px;
-      text-transform: uppercase; letter-spacing: 1.5px; display: flex;
-      align-items: center; justify-content: center;
+    .analytics-card h3 i {
+      font-size: 1.5rem;
     }
-    .cx-code-box {
-      font-size: 2rem; font-weight: 700; font-family: 'JetBrains Mono', monospace;
-      color: #ffffff; letter-spacing: 6px; background: rgba(0,0,0,0.55);
-      border: 2px solid rgba(0,240,255,0.35); border-radius: 14px;
-      padding: 18px 20px; margin-bottom: 14px; word-break: break-all;
-      display: block; user-select: all;
-      box-shadow: inset 0 2px 10px rgba(0,0,0,0.4), 0 0 20px rgba(0,240,255,0.08);
+    .stats {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
     }
-    .cx-countdown {
-      font-size: 0.82rem; font-family: 'JetBrains Mono', monospace;
-      margin: 10px 0 6px; padding: 8px 12px; background: rgba(255,255,255,0.05);
-      border-radius: 8px; border: 1px solid rgba(255,255,255,0.1);
+    .stat-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.8rem 1rem;
+      background: rgba(255,255,255,0.05);
+      border-radius: 10px;
+      border-left: 4px solid var(--accent);
     }
-    .cx-copy-btn {
-      padding: 12px 30px; background: transparent; border: 2px solid #00f0ff;
-      border-radius: 12px; color: #00f0ff; font-weight: 600; font-size: 0.95rem;
-      font-family: 'Space Grotesk', sans-serif; cursor: pointer;
-      transition: all 0.3s ease; text-transform: uppercase; letter-spacing: 1px;
-      width: 100%; display: block; margin-bottom: 4px;
+    .stat-label {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-weight: 500;
     }
-    .cx-copy-btn:hover { background: rgba(0,240,255,0.12); box-shadow: 0 0 20px rgba(0,240,255,0.3); }
-    .cx-copy-btn.copied { background: rgba(46,204,113,0.15); border-color: #2ecc71; color: #2ecc71; }
-
-    .cx-instructions { margin-top: 15px; font-size: 0.8rem; color: rgba(255,255,255,0.55); line-height: 1.6; text-align: left; }
-    .cx-step { display: flex; align-items: flex-start; gap: 10px; padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
-    .cx-step:last-child { border-bottom: none; }
-    .cx-step-num {
-      flex-shrink: 0; width: 20px; height: 20px;
-      background: linear-gradient(135deg, #00f0ff, #7c3aed); border-radius: 50%;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 0.7rem; font-weight: 700; color: #fff; line-height: 1; margin-top: 1px;
+    .stat-value {
+      font-weight: 700;
+      color: var(--accent);
     }
-    .cx-retry-btn {
-      margin-top: 15px; background: none; border: none; color: rgba(255,255,255,0.35);
-      font-size: 0.85rem; font-family: 'Space Grotesk', sans-serif; cursor: pointer;
-      transition: color 0.2s; display: block; width: 100%; text-align: center;
+    .uptime {
+      color: #6ec8a0;
     }
-    .cx-retry-btn:hover { color: rgba(255,255,255,0.7); }
-
-    .cx-connected { text-align: center; padding: 20px 0; }
-    .cx-connected-icon {
-      width: 36px; height: 36px; border-radius: 50%;
-      background: rgba(46,204,113,0.15); border: 2px solid #2ecc71;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 1.1rem; color: #2ecc71; animation: cxPulse 2s infinite;
+    body.sunny .uptime {
+      color: #4ade80;
     }
-    .cx-connected-title { font-size: 1rem; font-weight: 700; color: #2ecc71; margin-bottom: 2px; letter-spacing: 2px; }
-    .cx-connected-sub { color: rgba(255,255,255,0.6); font-size: 0.78rem; }
-
-    .cx-session-box {
-      margin-top: 20px; padding: 16px; background: rgba(0,240,255,0.04);
-      border: 1px solid rgba(0,240,255,0.2); border-radius: 12px; text-align: left;
+    body.snow .uptime {
+      color: #7dd3fc;
     }
-    .cx-session-label {
-      font-size: 0.78rem; font-weight: 600; color: #00f0ff;
-      text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px;
-    }
-    .cx-session-id {
-      font-family: 'JetBrains Mono', monospace; font-size: 0.7rem;
-      color: rgba(255,255,255,0.85); word-break: break-all; line-height: 1.5;
-      background: rgba(0,0,0,0.3); padding: 10px 12px; border-radius: 8px;
-      border: 1px solid rgba(255,255,255,0.06); max-height: 100px; overflow-y: auto; user-select: all;
+    body.forest .uptime {
+      color: #86efac;
     }
 
-    .cx-error {
-      color: #ff3860; font-size: 0.9rem; margin-top: 8px; padding: 10px;
-      background: rgba(255,56,96,0.1); border-radius: 8px; border-left: 3px solid #ff3860;
+    .live-timer {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.6rem;
+      margin-top: 1.5rem;
+      padding: 0.6rem 1.5rem;
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      backdrop-filter: blur(12px);
+      border-radius: 50px;
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--primary);
+      animation: fadeInUp 0.8s ease-out;
+    }
+    .live-timer i {
+      color: var(--accent);
+      animation: pulse 2s infinite;
     }
 
+    /* Pair Code card */
+    .pair-section { padding:2rem 2rem 4rem; flex:1; }
+    .pair-card {
+      max-width:480px; margin:0 auto;
+      background:var(--glass-bg);
+      border:1px solid var(--glass-border);
+      border-radius:20px;
+      padding:3rem;
+      backdrop-filter: blur(16px);
+      box-shadow:0 8px 30px rgba(0,0,0,0.5);
+      animation:fadeInUp 0.8s ease forwards;
+    }
+    .pair-card h2 {
+      text-align:center; color:var(--accent);
+      margin-bottom:1rem; font-size:2rem;
+      position: relative;
+    }
+    .pair-card h2::after {
+      content: '';
+      position: absolute;
+      bottom: -10px; left: 50%; transform: translateX(-50%);
+      width: 60px; height: 4px; background: var(--accent);
+      border-radius: 2px;
+      animation: underlineAnim 1.5s infinite;
+    }
+    @keyframes underlineAnim {
+      0%,100% { width: 60px; }
+      50%     { width:100px; }
+    }
+    .pair-card p {
+      color:rgba(255,255,255,0.7);
+      text-align:center; margin-bottom:1.5rem;
+    }
+    .pair-card label {
+      display:block; color:var(--light);
+      margin-bottom:0.3rem; font-weight:500;
+    }
+    .pair-card input[type="text"] {
+      width:100%; padding:1rem;
+      border-radius:10px; border:1px solid rgba(255,255,255,0.2);
+      background:rgba(255,255,255,0.15); color:var(--light);
+      margin-bottom:1.5rem;
+    }
+    .button-group { display:flex; gap:0.5rem; margin-bottom:1rem; }
+    .btn {
+      flex:1; padding:0.8rem;
+      border:none; border-radius:10px;
+      font-size:1rem; font-weight:500;
+      background:var(--accent); color:var(--dark);
+      cursor:pointer; position:relative; overflow:hidden;
+    }
+    .btn::before {
+      content: ''; position:absolute; top:0; left:-100%; width:100%; height:100%; background:rgba(255,255,255,0.2); transition:var(--transition);
+    }
+    .btn:hover::before { left:0; }
+    .btn:hover { transform:translateY(-2px); box-shadow:0 6px 20px rgba(91,122,153,0.4); }
+
+    .btn-secondary {
+      background:transparent; color:var(--accent); border:2px solid var(--accent);
+    }
+    .btn-secondary:hover { background:rgba(91,122,153,0.15); }
+
+    #loading-spinner { text-align:center; margin-bottom:1rem; display:none; }
+    #pair {
+      color:var(--light); text-align:center;
+      word-break:break-word; margin-bottom:1rem;
+    }
+    #copy-code, #validate-code { display:none; width:100%; margin-bottom:0.5rem; }
+
+    /* Deployment Section */
+    .deployment-section {
+      padding: 2rem;
+      max-width: 800px;
+      margin: 0 auto 4rem;
+      width: 100%;
+    }
+    .deployment-section h2 {
+      text-align: center;
+      font-size: 2.5rem;
+      margin-bottom: 2rem;
+      color: var(--accent);
+      position: relative;
+      display: inline-block;
+      left: 50%;
+      transform: translateX(-50%);
+    }
+    .deployment-section h2::after {
+      content: '';
+      position: absolute;
+      bottom: -10px;
+      left: 0;
+      width: 100%;
+      height: 3px;
+      background: var(--accent);
+      border-radius: 2px;
+    }
+    .deployment-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 1.5rem;
+    }
+    .deploy-card {
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      border-radius: 15px;
+      padding: 2rem;
+      backdrop-filter: blur(16px);
+      box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+      transition: var(--transition);
+      text-align: center;
+    }
+    .deploy-card:hover {
+      transform: translateY(-10px);
+      box-shadow: 0 15px 40px rgba(91,122,153,0.3);
+    }
+    .deploy-card h3 {
+      color: var(--accent);
+      font-size: 1.5rem;
+      margin-bottom: 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+    .deploy-btn {
+      display: inline-block;
+      width: 100%;
+      padding: 0.8rem 1.5rem;
+      background: var(--accent);
+      color: var(--dark);
+      text-decoration: none;
+      border-radius: 10px;
+      font-weight: 600;
+      text-align: center;
+      transition: var(--transition);
+      border: 2px solid transparent;
+    }
+    .deploy-btn:hover {
+      background: transparent;
+      color: var(--accent);
+      border: 2px solid var(--accent);
+      transform: translateY(-3px);
+      box-shadow: 0 8px 20px rgba(91,122,153,0.3);
+    }
+    .download-btn {
+      background: #6ec8a0;
+      color: #1a1e2e;
+    }
+    .download-btn:hover {
+      background: transparent;
+      color: #6ec8a0;
+      border: 2px solid #6ec8a0;
+    }
+
+    /* Loading animation */
+    .lds-ellipsis { display:inline-block; position:relative; width:80px; height:20px; }
+    .lds-ellipsis div { position:absolute; top:8px; width:10px; height:10px; border-radius:50%; background:var(--accent); animation-timing-function:cubic-bezier(0,1,1,0); }
+    .lds-ellipsis div:nth-child(1){left:8px; animation:lds1 0.6s infinite;} .lds-ellipsis div:nth-child(2){left:8px; animation:lds2 0.6s infinite;}
+    .lds-ellipsis div:nth-child(3){left:32px; animation:lds2 0.6s infinite;} .lds-ellipsis div:nth-child(4){left:56px; animation:lds3 0.6s infinite;}
+    @keyframes lds1 {0%{transform:scale(0);}100%{transform:scale(1);}} @keyframes lds3 {0%{transform:scale(1);}100%{transform:scale(0);}} @keyframes lds2 {0%{transform:translate(0,0);}100%{transform:translate(24px,0);}}
+    @keyframes fadeInUp {from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
+    @keyframes typing {from{width:0;}to{width:100%;}} @keyframes blink-caret {from,to{border-color:transparent;}50%{border-color:var(--accent);}} @keyframes pulse {0%,100%{transform:scale(1);}50%{transform:scale(1.1);}}
+
+    /* Footer */
+    footer {
+      background: var(--glass-bg);
+      backdrop-filter: blur(12px);
+      border-top:4px solid var(--accent);
+      padding:1.5rem 2rem;
+      text-align:center;
+      font-size:0.9rem;
+      color:var(--light);
+      box-shadow: 0 -4px 30px rgba(0,0,0,0.3);
+      position: relative;
+      margin-top:auto;
+    }
+    footer span {
+      color: var(--accent);
+      font-weight:600;
+    }
+    footer:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 -6px 40px rgba(91,122,153,0.3);
+    }
+
+    /* Responsive adjustments */
     @media (max-width: 768px) {
-      .cx-main-container { flex-direction: column; padding: 15px; }
-      .cx-stats-panel, .cx-container { width: 100%; max-width: 420px; }
-      .cx-title { font-size: 2rem; }
+      .hero h1 { font-size: 2.2rem; }
+      .analytics-grid, .deployment-grid { grid-template-columns: 1fr; }
+      .navbar-container { flex-direction: column; gap: 1rem; }
+      .social-icons { margin-top: 0.5rem; }
     }
-    @media (max-width: 480px) {
-      .cx-stats-panel, .cx-container { padding: 25px; }
-      .cx-title { font-size: 1.8rem; }
-    }
+
   </style>
 </head>
-<body>
-  <div class="cx-bg-animation">
-    <div class="cx-aurora-layer cx-aurora-1"></div>
-    <div class="cx-aurora-layer cx-aurora-2"></div>
-    <div class="cx-aurora-layer cx-aurora-3"></div>
-  </div>
-  <div class="cx-cyber-grid"></div>
-  <div class="cx-particles" id="particles"></div>
-
-  <div class="cx-main-container">
-    <div class="cx-stats-panel">
-      <div class="cx-stats-header">
-        <div class="cx-stats-icon"><i class="fas fa-chart-line"></i></div>
-        <div class="cx-stats-title">Server Stats</div>
-      </div>
-      <div class="cx-stat-item">
-        <div class="cx-stat-label"><div class="cx-status-indicator"></div>Status</div>
-        <div class="cx-stat-value">Online</div>
-      </div>
-      <div class="cx-stat-item">
-        <div class="cx-stat-label"><i class="fas fa-clock"></i>Uptime</div>
-        <div class="cx-stat-value" id="uptimeVal">–</div>
-      </div>
-      <div class="cx-stat-item">
-        <div class="cx-stat-label"><i class="fas fa-users"></i>Visitors</div>
-        <div class="cx-stat-value" id="visitorsVal">0</div>
-      </div>
-      <div class="cx-stat-item">
-        <div class="cx-stat-label"><i class="fas fa-server"></i>Requests</div>
-        <div class="cx-stat-value" id="requestsVal">0</div>
-      </div>
-      <div class="cx-stat-item">
-        <div class="cx-stat-label"><i class="fas fa-check-circle"></i>Success</div>
-        <div class="cx-stat-value" id="successVal" style="color:#2ecc71">0</div>
-      </div>
-      <div class="cx-stat-item">
-        <div class="cx-stat-label"><i class="fas fa-times-circle"></i>Failed</div>
-        <div class="cx-stat-value" id="failedVal">0</div>
+<body class="rainy">
+  <div class="cloud cloud-1"></div>
+  <div class="cloud cloud-2"></div>
+  <div class="cloud cloud-3"></div>
+  <div id="sun-glow"></div>
+  <div id="forest-glow"></div>
+  <canvas id="rain-canvas"></canvas>
+  <div id="particles-js"></div>
+  <button class="season-toggle" id="season-toggle" title="Toggle Season">
+    <span id="season-icon">&#9748;</span>
+    <span class="season-label" id="season-label">Rainy</span>
+  </button>
+  <audio id="bg-music" loop autoplay muted>
+    <source src="https://files.catbox.moe/nltrjp.mp3" type="audio/mpeg">
+  </audio>
+  <button class="music-toggle" id="music-toggle" title="Play Music">
+    <i class="fas fa-music"></i>
+  </button>
+  <header class="navbar">
+    <div class="navbar-container">
+      <a href="#" class="logo"><i class="fas fa-robot"></i> TECHWORD BOTS</a>
+      <div class="social-icons">
+        <a href="https://whatsapp.com/channel/0029VbCafMZBA1f42UxcYW0D" target="_blank" title="WhatsApp">
+          <i class="fab fa-whatsapp"></i>
+        </a>
+        <a href="https://t.me/courtney254" target="_blank" title="Telegram">
+          <i class="fab fa-telegram-plane"></i>
+        </a>
+        <a href="https://github.com/Courtney250" target="_blank" title="GitHub">
+          <i class="fab fa-github"></i>
+        </a>
       </div>
     </div>
+  </header>  
+  
+  <section class="hero">
+    <h1>Pair Code.</h1>
+    <div class="typing-text">Connect to TECHWORD BOT'S instantly!</div>
+    <div class="live-timer">
+      <i class="fas fa-clock"></i>
+      <span id="live-uptime">0d 0h 0m 0s</span>
+    </div>
+  </section>  
 
-    <div class="cx-container">
-      <div class="cx-header">
-        <h1 class="cx-title">TRUTH-MD</h1>
-        <p class="cx-subtitle">Enter your WhatsApp number with country code</p>
-      </div>
-
-      <div class="cx-status-badge cx-badge-idle" id="statusBadge">
-        <i class="fas fa-link"></i>
-        <span>Ready to pair</span>
-      </div>
-
-      <div id="formSection">
-        <form onsubmit="handleSubmit(event)">
-          <div class="cx-input-field">
-            <input type="tel" inputmode="numeric" id="phoneInput" placeholder="2547xxxxxxxx" autocomplete="off"/>
-            <div class="cx-error" id="phoneError" style="display:none"></div>
+  <section class="analytics-section">
+    <h2>Project Analytics</h2>
+    <div class="analytics-grid">
+      <div class="analytics-card">
+        <h3><i class="fas fa-chart-line"></i>TECHWORD Analytics</h3>
+        <div class="stats">
+          <div class="stat-item">
+            <div class="stat-label">
+              <i class="fab fa-github"></i>
+              <span>GitHub Stars</span>
+            </div>
+            <div class="stat-value">12</div>
           </div>
-          <button type="submit" class="cx-btn" id="pairBtn">Generate Pair Code</button>
-        </form>
-      </div>
-
-      <div id="loadingSection" style="display:none">
-        <div class="cx-loading">
-          <div class="cx-spinner"></div>
-          <div class="cx-loading-text">Generating pairing code…</div>
-        </div>
-      </div>
-
-      <div class="cx-result" id="resultSection" style="display:none">
-        <div class="cx-result-label">
-          <i class="fas fa-key" style="margin-right:8px"></i>
-          Pairing Code Generated
-        </div>
-        <div class="cx-code-box" id="codeDisplay">--------</div>
-        <div class="cx-countdown" id="countdown" style="color:#2ecc71"></div>
-        <button class="cx-copy-btn" id="copyCodeBtn" onclick="copyCode()">
-          <i class="fas fa-clone" style="margin-right:8px"></i>Copy Code
-        </button>
-        <div class="cx-instructions">
-          <div class="cx-step"><span class="cx-step-num">1</span>Open <b>WhatsApp</b> → <b>Linked Devices</b> → <b>Link a Device</b></div>
-          <div class="cx-step"><span class="cx-step-num">2</span>Tap <b>"Link with phone number instead"</b></div>
-          <div class="cx-step"><span class="cx-step-num">3</span>Enter the code above — session string will arrive on your WhatsApp</div>
-        </div>
-        <button class="cx-retry-btn" onclick="resetForm()">
-          <i class="fas fa-redo" style="margin-right:6px"></i>Use different number
-        </button>
-      </div>
-
-      <div class="cx-connected" id="connectedSection" style="display:none">
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
-          <div class="cx-connected-icon"><i class="fas fa-shield-alt"></i></div>
-          <div>
-            <div class="cx-connected-title">SESSION GENERATED</div>
-            <div class="cx-connected-sub">WhatsApp linked successfully</div>
+          <div class="stat-item">
+            <div class="stat-label">
+              <i class="fas fa-code-branch"></i>
+              <span>Forks</span>
+            </div>
+            <div class="stat-value">72</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-label">
+              <i class="fas fa-server"></i>
+              <span>Uptime</span>
+            </div>
+            <div class="stat-value uptime" id="uptime-1">Loading...</div>
           </div>
         </div>
-        <div class="cx-session-box">
-          <div class="cx-session-label">
-            <i class="fas fa-key" style="margin-right:6px"></i>
-            Your Session ID <span style="opacity:0.6;font-size:0.75rem">(also sent to your WhatsApp)</span>
+      </div>
+      
+      <div class="analytics-card">
+        <h3><i class="fas fa-robot"></i> Techword Ultra Bot</h3>
+        <div class="stats">
+          <div class="stat-item">
+            <div class="stat-label">
+              <i class="fab fa-github"></i>
+              <span>GitHub Stars</span>
+            </div>
+            <div class="stat-value">comming soon</div>
           </div>
-          <div class="cx-session-id" id="sessionDisplay"></div>
-          <button class="cx-copy-btn" id="copySessionBtn" onclick="copySession()" style="margin-top:10px;width:100%">
-            <i class="fas fa-copy" style="margin-right:8px"></i>Copy Session ID
-          </button>
+          <div class="stat-item">
+            <div class="stat-label">
+              <i class="fas fa-code-branch"></i>
+              <span>Forks</span>
+            </div>
+            <div class="stat-value">coming soon</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-label">
+              <i class="fas fa-server"></i>
+              <span>Uptime</span>
+            </div>
+            <div class="stat-value uptime" id="uptime-2">Loading...</div>
+          </div>
         </div>
       </div>
     </div>
-  </div>
+  </section>
+  
+  <section class="pair-section">
+    <div class="pair-card">
+      <h2>Techword Pair Code</h2>
+      <p>Enter your WhatsApp number with country code to get your pairing code and link.</p>
+      <label for="phone-number">Phone Number</label>
+      <input type="text" id="phone-number" placeholder="e.g., +254XXXXXX">
 
+      <div class="button-group">
+        <button class="btn" id="generate-code">Get Code & Link</button>
+        <button class="btn btn-secondary" id="validate-code">Validate Session</button>
+      </div>
+
+      <div id="loading-spinner">
+        <div class="lds-ellipsis"><div></div><div></div><div></div><div></div></div>
+        <p>Generating your code...</p>
+      </div>
+      <div id="pair"></div>
+      <button class="btn" id="copy-code">Copy Code</button>
+
+      <div id="session-result" style="display:none; margin-top:1.5rem; padding:1.5rem; background:rgba(0,255,0,0.08); border:1px solid rgba(0,255,0,0.3); border-radius:12px;">
+        <h3 style="color:#00ff00; margin-bottom:0.8rem; text-align:center; font-size:1.2rem;"><i class="fas fa-check-circle"></i> Session Connected</h3>
+        <p style="color:rgba(255,255,255,0.7); text-align:center; margin-bottom:0.8rem; font-size:0.85rem;">Your session ID has been generated successfully</p>
+        <div id="session-id-box" style="background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.15); border-radius:8px; padding:0.8rem; word-break:break-all; font-family:monospace; font-size:0.75rem; color:var(--accent); max-height:120px; overflow-y:auto; margin-bottom:0.8rem;"></div>
+        <button class="btn" id="copy-session" style="width:100%; background:#00ff00; color:#000;">Copy Session ID</button>
+      </div>
+
+      <div id="session-waiting" style="display:none; margin-top:1rem; text-align:center;">
+        <div class="lds-ellipsis"><div></div><div></div><div></div><div></div></div>
+        <p style="color:rgba(255,255,255,0.6); font-size:0.9rem;">Waiting for WhatsApp to link...</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="deployment-section">
+    <h2>Deploy TECHWORD</h2>
+    <div class="deployment-grid">
+      <div class="deploy-card">
+        <h3><i class="fab fa-heroku"></i> Heroku</h3>
+        <a href="https://www.herokucdn.com/deploy/button.svg)](https://dashboard.heroku.com/new?template=https%3A%2F%2Fgithub.com%2Fsuperstar-zimtk%2pretty-md" class="deploy-btn">Deploy on Heroku</a>
+      </div>
+      <div class="deploy-card">
+        <h3><i class="fas fa-train"></i> Railway</h3>
+        <a href="railway.com" class="deploy-btn">Deploy on Railway</a>
+      </div>
+      <div class="deploy-card">
+        <h3><i class="fas fa-code"></i> Replit</h3>
+        <a href="#" class="deploy-btn">Deploy on Replit</a>
+      </div>
+      <div class="deploy-card">
+        <h3><i class="fas fa-server"></i> Render</h3>
+        <a href="https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/courtney250/TECHWORD-V1.git" class="deploy-btn">Deploy on Render</a>
+      </div>
+      <div class="deploy-card">
+        <h3><i class="fas fa-download"></i> Download</h3>
+        <a href="https://github.com/courtney250/TECHWORD-V1-/archive/refs/heads/main.zip" class="deploy-btn download-btn">Download TECHWORD Latest Files</a>
+      </div>
+    </div>
+  </section>
+  
+  <footer>&copy; <span id="currentYear"></span> TECHWORD TECH. Powered by <span>COURTNEY</span> 🦅</footer>  
+  
   <script>
-    (function(){
-      var pc = document.getElementById('particles');
-      for(var i=0;i<28;i++){
-        var d = document.createElement('div');
-        d.className='cx-particle';
-        d.style.left = ((i*3.7)%100)+'vw';
-        d.style.animationDelay = ((i*0.73)%20)+'s';
-        d.style.animationDuration = (15+(i%5)*2)+'s';
-        pc.appendChild(d);
-      }
-    })();
+    // Rain canvas
+    const rainCanvas = document.getElementById('rain-canvas');
+    const rCtx = rainCanvas.getContext('2d');
+    let rainDrops = [];
+    let rainActive = true;
+    let snowFlakes = [];
+    let snowActive = false;
 
-    var uptimeSeconds = 0;
-    var uptimeTimer = null;
-    function formatUptime(s){
-      var h=Math.floor(s/3600);var m=Math.floor((s%3600)/60);var sec=s%60;
-      if(h>0) return h+'h '+m+'m '+sec+'s';
-      if(m>0) return m+'m '+sec+'s';
-      return sec+'s';
+    function resizeRain() {
+      rainCanvas.width = window.innerWidth;
+      rainCanvas.height = window.innerHeight;
     }
-    function tickUptime(){
-      uptimeSeconds++;
-      document.getElementById('uptimeVal').textContent=formatUptime(uptimeSeconds);
+    resizeRain();
+    window.addEventListener('resize', resizeRain);
+
+    function initRain() {
+      rainDrops = [];
+      for (let i = 0; i < 150; i++) {
+        rainDrops.push({
+          x: Math.random() * rainCanvas.width,
+          y: Math.random() * rainCanvas.height,
+          len: Math.random() * 18 + 8,
+          speed: Math.random() * 6 + 4,
+          opacity: Math.random() * 0.3 + 0.1
+        });
+      }
     }
-    function fetchStats(){
-      fetch('/api/stats').then(function(r){return r.json()}).then(function(d){
-        if(d.uptimeSeconds!==undefined){
-          uptimeSeconds=d.uptimeSeconds;
-          document.getElementById('uptimeVal').textContent=formatUptime(uptimeSeconds);
+    initRain();
+
+    function drawWeather() {
+      rCtx.clearRect(0, 0, rainCanvas.width, rainCanvas.height);
+
+      if (rainActive) {
+        rCtx.strokeStyle = 'rgba(174,194,224,0.4)';
+        rCtx.lineWidth = 1;
+        rCtx.lineCap = 'round';
+        for (const d of rainDrops) {
+          rCtx.globalAlpha = d.opacity;
+          rCtx.beginPath();
+          rCtx.moveTo(d.x, d.y);
+          rCtx.lineTo(d.x + 1, d.y + d.len);
+          rCtx.stroke();
+          d.y += d.speed;
+          d.x += 0.5;
+          if (d.y > rainCanvas.height) { d.y = -d.len; d.x = Math.random() * rainCanvas.width; }
         }
-        if(d.visitors!==undefined) document.getElementById('visitorsVal').textContent=d.visitors;
-        if(d.requests!==undefined) document.getElementById('requestsVal').textContent=d.requests;
-        if(d.success!==undefined) document.getElementById('successVal').textContent=d.success;
-        if(d.failed!==undefined){
-          document.getElementById('failedVal').textContent=d.failed;
-          if(d.failed>0) document.getElementById('failedVal').style.color='#ff3860';
-        }
-      }).catch(function(){
-        fetch('/uptime').then(function(r){return r.json()}).then(function(d){
-          if(d.uptimeMs){
-            uptimeSeconds=Math.floor(d.uptimeMs/1000);
-            document.getElementById('uptimeVal').textContent=formatUptime(uptimeSeconds);
+        rCtx.globalAlpha = 1;
+      }
+
+      if (snowActive) {
+        for (const f of snowFlakes) {
+          rCtx.globalAlpha = f.opacity;
+          rCtx.fillStyle = '#e8f0fa';
+          rCtx.beginPath();
+          rCtx.arc(f.x, f.y, f.r, 0, Math.PI * 2);
+          rCtx.fill();
+          f.y += f.speed;
+          f.x += f.drift + Math.sin(f.y * 0.01) * 0.3;
+          if (f.y > rainCanvas.height + f.r) {
+            f.y = -f.r;
+            f.x = Math.random() * rainCanvas.width;
           }
-        }).catch(function(){});
-      });
-    }
-    fetchStats();
-    setInterval(fetchStats, 5000);
-    uptimeTimer = setInterval(tickUptime, 1000);
-
-    var evtSource=null, reqCount=0, successCount=0, failCount=0, countdownTimer=null, countdownVal=0;
-
-    function setBadge(icon, text, cls){
-      var b=document.getElementById('statusBadge');
-      b.className='cx-status-badge '+cls;
-      b.innerHTML='<i class="fas '+icon+'"></i><span>'+text+'</span>';
-    }
-
-    function handleSubmit(e){
-      e.preventDefault();
-      var num=document.getElementById('phoneInput').value.replace(/\D/g,'');
-      if(!num||num.length<7){
-        var err=document.getElementById('phoneError');
-        err.textContent='Include country code, digits only (e.g. 254712345678)';
-        err.style.display='block';
-        return;
+        }
+        rCtx.globalAlpha = 1;
       }
-      document.getElementById('phoneError').style.display='none';
-      startPairing(num);
+
+      requestAnimationFrame(drawWeather);
+    }
+    drawWeather();
+
+    // Particles configs
+    const rainyParticles = {
+      particles: { number:{value:40}, color:{value:"#7a8fa6"}, size:{value:1.5}, line_linked:{enable:true,distance:100,color:"#5b7a99",opacity:0.2,width:1}, move:{enable:true,speed:0.5,out_mode:"out"}, opacity:{value:0.3} },
+      interactivity:{ events:{onhover:{enable:true,mode:"grab"},onclick:{enable:true,mode:"push"}}, modes:{grab:{distance:150,line_linked:{opacity:0.3}}, push:{particles_nb:1}} }, retina_detect:true
+    };
+    const sunnyParticles = {
+      particles: { number:{value:30}, color:{value:"#f0a500"}, size:{value:2,random:true}, line_linked:{enable:false}, move:{enable:true,speed:0.8,direction:"none",out_mode:"out"}, opacity:{value:0.5,random:true}, shape:{type:"circle"} },
+      interactivity:{ events:{onhover:{enable:true,mode:"bubble"},onclick:{enable:true,mode:"push"}}, modes:{bubble:{distance:200,size:4,duration:2,opacity:0.8}, push:{particles_nb:2}} }, retina_detect:true
+    };
+    const snowParticles = {
+      particles: { number:{value:80}, color:{value:"#e8f0fa"}, size:{value:3,random:true}, line_linked:{enable:false}, move:{enable:true,speed:1.2,direction:"bottom",out_mode:"out",random:true,straight:false}, opacity:{value:0.7,random:true}, shape:{type:"circle"} },
+      interactivity:{ events:{onhover:{enable:true,mode:"repulse"},onclick:{enable:true,mode:"push"}}, modes:{repulse:{distance:80,duration:0.4}, push:{particles_nb:3}} }, retina_detect:true
+    };
+    const forestParticles = {
+      particles: { number:{value:25}, color:{value:"#5a9e6f"}, size:{value:2,random:true}, line_linked:{enable:true,distance:150,color:"#3d7a4f",opacity:0.15,width:1}, move:{enable:true,speed:0.3,direction:"none",out_mode:"out"}, opacity:{value:0.4,random:true}, shape:{type:"circle"} },
+      interactivity:{ events:{onhover:{enable:true,mode:"grab"},onclick:{enable:true,mode:"push"}}, modes:{grab:{distance:120,line_linked:{opacity:0.25}}, push:{particles_nb:1}} }, retina_detect:true
+    };
+
+    const seasonConfigs = {
+      rainy:  { icon: '\u2614', label: 'Rainy',  rain: true,  snow: false, particles: rainyParticles },
+      sunny:  { icon: '\u2600', label: 'Sunny',  rain: false, snow: false, particles: sunnyParticles },
+      snow:   { icon: '\u2744', label: 'Snow',   rain: false, snow: true,  particles: snowParticles },
+      forest: { icon: '\uD83C\uDF32', label: 'Forest', rain: false, snow: false, particles: forestParticles }
+    };
+    const seasonOrder = ['rainy', 'sunny', 'snow', 'forest'];
+
+    particlesJS("particles-js", rainyParticles);
+
+    function initSnow() {
+      snowFlakes = [];
+      for (let i = 0; i < 100; i++) {
+        snowFlakes.push({
+          x: Math.random() * rainCanvas.width,
+          y: Math.random() * rainCanvas.height,
+          r: Math.random() * 3 + 1,
+          speed: Math.random() * 1.5 + 0.5,
+          drift: Math.random() * 0.8 - 0.4,
+          opacity: Math.random() * 0.5 + 0.3
+        });
+      }
     }
 
-    function startPairing(num){
-      document.getElementById('formSection').style.display='none';
-      document.getElementById('resultSection').style.display='none';
-      document.getElementById('connectedSection').style.display='none';
-      document.getElementById('loadingSection').style.display='block';
-      setBadge('fa-circle-notch fa-spin','Generating code…','cx-badge-busy');
-      reqCount++;document.getElementById('requestsVal').textContent=reqCount;
-      if(evtSource)evtSource.close();
-      if(countdownTimer)clearInterval(countdownTimer);
+    // Season toggle
+    let currentSeason = 'rainy';
+    let seasonIndex = 0;
+    const seasonToggle = document.getElementById('season-toggle');
+    const seasonIcon = document.getElementById('season-icon');
+    const seasonLabel = document.getElementById('season-label');
 
-      evtSource=new EventSource('/code?number='+encodeURIComponent(num));
-      evtSource.addEventListener('code',function(e){
-        var data=JSON.parse(e.data);
-        document.getElementById('codeDisplay').textContent=data.code;
-        document.getElementById('loadingSection').style.display='none';
-        document.getElementById('resultSection').style.display='block';
-        setBadge('fa-key','Enter code in WhatsApp','cx-badge-idle');
-        countdownVal=120;
-        updateCountdown();
-        countdownTimer=setInterval(function(){
-          countdownVal--;
-          updateCountdown();
-          if(countdownVal<=0)clearInterval(countdownTimer);
-        },1000);
+    function setSeason(season) {
+      currentSeason = season;
+      seasonIndex = seasonOrder.indexOf(season);
+      const cfg = seasonConfigs[season];
+      document.body.className = season;
+      seasonIcon.textContent = cfg.icon;
+      seasonLabel.textContent = cfg.label;
+      rainActive = cfg.rain;
+      snowActive = cfg.snow;
+      if (cfg.snow) initSnow();
+      particlesJS("particles-js", cfg.particles);
+    }
+
+    seasonToggle.addEventListener('click', () => {
+      seasonIndex = (seasonIndex + 1) % seasonOrder.length;
+      setSeason(seasonOrder[seasonIndex]);
+    });
+
+    // Auto-rotate seasons every 30 seconds
+    setInterval(() => {
+      seasonIndex = (seasonIndex + 1) % seasonOrder.length;
+      setSeason(seasonOrder[seasonIndex]);
+    }, 30000);
+
+    // Footer year
+    document.getElementById('currentYear').textContent = new Date().getFullYear();
+
+    // Uptime
+    let serverStartTime = null;
+    const liveUptime = document.getElementById('live-uptime');
+
+    function formatUptime(ms) {
+      const s = Math.floor(ms / 1000) % 60;
+      const m = Math.floor(ms / 60000) % 60;
+      const h = Math.floor(ms / 3600000) % 24;
+      const d = Math.floor(ms / 86400000);
+      return `${d}d ${h}h ${m}m ${s}s`;
+    }
+
+    function tickUptime() {
+      if (!serverStartTime) return;
+      const elapsed = Date.now() - serverStartTime;
+      liveUptime.textContent = formatUptime(elapsed);
+    }
+
+    async function fetchUptime() {
+      try {
+        const { data } = await axios.get('/uptime');
+        const el1 = document.getElementById('uptime-1');
+        const el2 = document.getElementById('uptime-2');
+        if (el1) el1.textContent = data.uptime;
+        if (el2) el2.textContent = data.uptime;
+        if (data.startedAt) {
+          serverStartTime = new Date(data.startedAt).getTime();
+        }
+      } catch (e) {
+        console.error('Uptime fetch error:', e);
+      }
+    }
+    fetchUptime();
+    setInterval(fetchUptime, 30000);
+    setInterval(tickUptime, 1000);
+
+    // Pair code logic
+    const genBtn = document.getElementById('generate-code');
+    const valBtn = document.getElementById('validate-code');
+    const copyBtn = document.getElementById('copy-code');
+    const spinner = document.getElementById('loading-spinner');
+    const pairDiv = document.getElementById('pair');
+    const phoneInput = document.getElementById('phone-number');
+    const sessionResult = document.getElementById('session-result');
+    const sessionIdBox = document.getElementById('session-id-box');
+    const copySessionBtn = document.getElementById('copy-session');
+    const sessionWaiting = document.getElementById('session-waiting');
+
+    let activeStream = null;
+
+    async function copyToClipboard() {
+      const code = copyBtn.dataset.code;
+      try { 
+        await navigator.clipboard.writeText(code); 
+        copyBtn.textContent = 'Copied!'; 
+        setTimeout(() => copyBtn.textContent = 'Copy Code', 2000); 
+      }
+      catch (err) { 
+        console.error('Copy failed:', err); 
+      }
+    }
+
+    genBtn.addEventListener('click', () => {
+      const num = phoneInput.value.replace(/\D/g,'');
+      if (!num) { 
+        pairDiv.textContent = '❗ Please enter your WhatsApp number with country code.'; 
+        return; 
+      }
+
+      if (activeStream) { activeStream.close(); activeStream = null; }
+
+      spinner.style.display='block'; 
+      pairDiv.textContent=''; 
+      valBtn.style.display='none'; 
+      copyBtn.style.display='none';
+      sessionResult.style.display='none';
+      sessionWaiting.style.display='none';
+      genBtn.disabled=true;
+      phoneInput.value='+'+num;
+
+      const evtSource = new EventSource(`/code?number=${num}`);
+      activeStream = evtSource;
+
+      evtSource.addEventListener('code', (e) => {
+        const d = JSON.parse(e.data);
+        const code = d.code || '❗ Service Unavailable';
+        const waLink = `https://wa.me/${num}?text=${encodeURIComponent(code)}`;
+        pairDiv.innerHTML = `<p>Your Code: <strong>${code}</strong></p><p><a href="${waLink}" target="_blank" style="color:var(--accent);">Open WhatsApp Link</a></p>`;
+        copyBtn.dataset.code = code;
+        copyBtn.style.display = 'block';
+        valBtn.style.display = 'block';
+        sessionWaiting.style.display = 'block';
+        sessionResult.style.display = 'none';
+        spinner.style.display = 'none';
+        genBtn.disabled = false;
       });
-      evtSource.addEventListener('session',function(e){
-        var data=JSON.parse(e.data);
-        if(countdownTimer)clearInterval(countdownTimer);
-        document.getElementById('loadingSection').style.display='none';
-        document.getElementById('resultSection').style.display='none';
-        document.getElementById('formSection').style.display='block';
-        document.getElementById('connectedSection').style.display='block';
-        document.getElementById('sessionDisplay').textContent=data.sessionId;
-        setBadge('fa-check-circle','Connected ✅','cx-badge-ok');
-        successCount++;document.getElementById('successVal').textContent=successCount;
+
+      evtSource.addEventListener('session', (e) => {
+        const d = JSON.parse(e.data);
+        sessionWaiting.style.display = 'none';
+        sessionIdBox.textContent = d.sessionId;
+        sessionResult.style.display = 'block';
+        swal("Session Linked!", "Your session ID has been generated successfully.", "success");
         evtSource.close();
+        activeStream = null;
       });
-      evtSource.addEventListener('error',function(e){
-        try{var data=JSON.parse(e.data);setBadge('fa-times-circle',data.message||'Something went wrong','cx-badge-err')}
-        catch(x){setBadge('fa-times-circle','Something went wrong','cx-badge-err')}
-        document.getElementById('loadingSection').style.display='none';
-        document.getElementById('formSection').style.display='block';
-        failCount++;document.getElementById('failedVal').textContent=failCount;
-        if(failCount>0)document.getElementById('failedVal').style.color='#ff3860';
+
+      evtSource.addEventListener('error', (e) => {
+        spinner.style.display = 'none';
+        genBtn.disabled = false;
+        sessionWaiting.style.display = 'none';
+        if (e.data) {
+          try {
+            const d = JSON.parse(e.data);
+            swal("Error", d.message || "Session linking failed. Please try again.", "error");
+          } catch(_) {
+            swal("Error", "Session linking failed. Please try again.", "error");
+          }
+        }
         evtSource.close();
+        activeStream = null;
       });
-      evtSource.onerror=function(){
-        setBadge('fa-times-circle','Connection lost','cx-badge-err');
-        document.getElementById('loadingSection').style.display='none';
-        document.getElementById('formSection').style.display='block';
-        failCount++;document.getElementById('failedVal').textContent=failCount;
-        if(failCount>0)document.getElementById('failedVal').style.color='#ff3860';
-        evtSource.close();
+
+      evtSource.onerror = () => {
+        if (evtSource.readyState === EventSource.CLOSED) {
+          spinner.style.display = 'none';
+          genBtn.disabled = false;
+          activeStream = null;
+        }
       };
-    }
+    });
 
-    function updateCountdown(){
-      var el=document.getElementById('countdown');
-      if(countdownVal>30){el.style.color='#2ecc71';el.innerHTML='<i class="fas fa-clock" style="margin-right:5px"></i>Valid for <strong>'+countdownVal+'s</strong> — enter this in WhatsApp now'}
-      else if(countdownVal>10){el.style.color='#f39c12';el.innerHTML='<i class="fas fa-clock" style="margin-right:5px"></i>Valid for <strong>'+countdownVal+'s</strong> — enter this in WhatsApp now'}
-      else if(countdownVal>0){el.style.color='#ff3860';el.innerHTML='<i class="fas fa-clock" style="margin-right:5px"></i>Valid for <strong>'+countdownVal+'s</strong> — enter this in WhatsApp now'}
-      else{el.style.color='#f39c12';el.innerHTML='<i class="fas fa-exclamation-triangle" style="margin-right:5px"></i>Code may have expired — generate a new one if needed'}
-    }
+    copyBtn.addEventListener('click', copyToClipboard);
 
-    function copyCode(){
-      var code=document.getElementById('codeDisplay').textContent;
-      navigator.clipboard.writeText(code).catch(function(){
-        var ta=document.createElement('textarea');ta.value=code;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);
+    copySessionBtn.addEventListener('click', async () => {
+      const sid = sessionIdBox.textContent;
+      try {
+        await navigator.clipboard.writeText(sid);
+        copySessionBtn.textContent = 'Copied!';
+        setTimeout(() => copySessionBtn.textContent = 'Copy Session ID', 2000);
+      } catch (err) {
+        console.error('Copy failed:', err);
+      }
+    });
+
+    valBtn.addEventListener('click', () => window.location.href='/validate');
+    phoneInput.addEventListener('input', function(){ 
+      let v = this.value.replace(/\D/g,''); 
+      this.value = v ? '+'+v : ''; 
+    });
+
+    // Music player
+    const bgMusic = document.getElementById('bg-music');
+    const musicBtn = document.getElementById('music-toggle');
+    bgMusic.volume = 0.35;
+
+    function startMusic() {
+      bgMusic.muted = false;
+      bgMusic.play().then(() => {
+        musicBtn.classList.add('playing');
+        musicBtn.title = 'Pause Music';
+      }).catch(() => {
+        bgMusic.muted = true;
       });
-      var btn=document.getElementById('copyCodeBtn');
-      btn.innerHTML='<i class="fas fa-check" style="margin-right:8px"></i>Copied!';
-      btn.classList.add('copied');
-      setTimeout(function(){btn.innerHTML='<i class="fas fa-clone" style="margin-right:8px"></i>Copy Code';btn.classList.remove('copied')},2000);
     }
 
-    function copySession(){
-      var sid=document.getElementById('sessionDisplay').textContent;
-      navigator.clipboard.writeText(sid).catch(function(){
-        var ta=document.createElement('textarea');ta.value=sid;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);
-      });
-      var btn=document.getElementById('copySessionBtn');
-      btn.innerHTML='<i class="fas fa-check" style="margin-right:8px"></i>Copied!';
-      btn.classList.add('copied');
-      setTimeout(function(){btn.innerHTML='<i class="fas fa-copy" style="margin-right:8px"></i>Copy Session ID';btn.classList.remove('copied')},2000);
-    }
+    // Unmute immediately — muted autoplay is always allowed by browsers
+    // then we unmute right away so it plays with sound from the start
+    bgMusic.play().then(() => {
+      bgMusic.muted = false;
+      musicBtn.classList.add('playing');
+      musicBtn.title = 'Pause Music';
+    }).catch(() => {
+      bgMusic.muted = true;
+    });
 
-    function resetForm(){
-      if(evtSource)evtSource.close();
-      if(countdownTimer)clearInterval(countdownTimer);
-      document.getElementById('resultSection').style.display='none';
-      document.getElementById('connectedSection').style.display='none';
-      document.getElementById('loadingSection').style.display='none';
-      document.getElementById('formSection').style.display='block';
-      document.getElementById('phoneInput').value='';
-      setBadge('fa-link','Ready to pair','cx-badge-idle');
-    }
+    // Fallback: play with sound on first user interaction if still blocked
+    const tryOnInteraction = () => {
+      if (bgMusic.paused || bgMusic.muted) {
+        bgMusic.muted = false;
+        bgMusic.play().then(() => {
+          musicBtn.classList.add('playing');
+          musicBtn.title = 'Pause Music';
+        }).catch(() => {});
+      }
+      document.removeEventListener('click', tryOnInteraction);
+      document.removeEventListener('touchstart', tryOnInteraction);
+    };
+    document.addEventListener('click', tryOnInteraction);
+    document.addEventListener('touchstart', tryOnInteraction);
+
+    musicBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (bgMusic.paused) {
+        startMusic();
+      } else {
+        bgMusic.pause();
+        musicBtn.classList.remove('playing');
+        musicBtn.title = 'Play Music';
+      }
+    });
   </script>
 </body>
 </html>
