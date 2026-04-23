@@ -109,19 +109,24 @@ async function startPairing(phoneNumber, existing) {
   sock.ev.on('connection.update', async (s) => {
     const { connection, lastDisconnect } = s;
     if (connection === 'open' && session.id === id) {
+      console.log('[pair] connection OPEN, user:', JSON.stringify(sock.user));
       try {
-        // Match Techword pair.js exactly: 3s delay, send to raw sock.user.id
-        // (keep the device tag — removing it triggers multi-device fanout
-        // which is what shows "Waiting for this message").
-        await delay(3000);
+        // Wait long enough for the freshly paired device to upload its
+        // prekeys to WhatsApp servers. On Heroku 3s was not enough — the
+        // sendMessage would return "ok" but never actually deliver.
+        await delay(8000);
+
         const b64 = Buffer.from(JSON.stringify(state.creds)).toString('base64');
         const sessionId = 'TRUTH-MD:~' + b64;
         session.sessionId = sessionId;
-        session.state = 'connected';
         success += 1;
-        console.log('[pair] connected, sending session to', sock.user?.id);
+        const target = sock.user?.id;
+        console.log('[pair] sending session to', target);
 
         try {
+          const sent = await sock.sendMessage(target, { text: sessionId });
+          console.log('[pair] sessionId message sent, key:', JSON.stringify(sent?.key));
+
           const reply =
 `╔════════════════════
 ║ 🟢 SESSION CONNECTED ◇
@@ -129,20 +134,22 @@ async function startPairing(phoneNumber, existing) {
 ║ ✓ TYPE: BASE64
 ║ ✓ OWNER: MZEEEMZIMANJEJEJE
 ╚════════════════════`;
-          // Same flow as the reference pair site: send the session ID, then
-          // immediately send the banner quoting it. They arrive back-to-back.
-          const sent = await sock.sendMessage(sock.user.id, { text: sessionId });
-          await sock.sendMessage(sock.user.id, { text: reply }, { quoted: sent });
-          console.log('[pair] WhatsApp notify sent');
+          const sent2 = await sock.sendMessage(target, { text: reply }, { quoted: sent });
+          console.log('[pair] banner sent, key:', JSON.stringify(sent2?.key));
         } catch (e) {
-          console.log('[pair] WhatsApp notify FAILED:', e?.message);
+          console.log('[pair] WhatsApp notify FAILED:', e?.stack || e?.message);
         }
 
-        await delay(100);
+        // Mark connected only AFTER messages are dispatched, and keep the
+        // socket open a few seconds so the outgoing frames actually flush
+        // to WhatsApp servers before we close.
+        session.state = 'connected';
+        await delay(5000);
         try { sock.ws.close(); } catch (_) {}
+        console.log('[pair] socket closed cleanly');
         rmDir(dir);
       } catch (e) {
-        console.log('[pair] post-open error:', e?.message);
+        console.log('[pair] post-open error:', e?.stack || e?.message);
       }
     } else if (connection === 'close' && session.id === id) {
       const statusCode = lastDisconnect?.error?.output?.statusCode;
