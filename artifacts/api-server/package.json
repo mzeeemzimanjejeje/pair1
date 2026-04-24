@@ -13,7 +13,7 @@
     "author": "Gifted Dave",
     "license": "GPL-3.0 license",
     "dependencies": {
-        "@whiskeysockets/baileys": "github:Davex-254/davebaileys",
+        "@whiskeysockets/baileys": "npm:wileys@^0.5.1",
         "awesome-phonenumber": "^2.73.0",
         "body-parser": "^1.20.4",
         "express": "^4.22.1",

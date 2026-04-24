@@ -30,7 +30,7 @@
     "lightningcss-win32-x64-msvc": "^1.32.0"
   },
   "dependencies": {
-    "@whiskeysockets/baileys": "github:Davex-254/davebaileys",
+    "@whiskeysockets/baileys": "npm:wileys@^0.5.1",
     "body-parser": "^1.20.4",
     "express": "^4.22.1",
     "pino": "^8.21.0"
