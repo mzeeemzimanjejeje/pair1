@@ -88,7 +88,7 @@ router.get('/', async (req, res) => {
 ║ 🟢 SESSION CONNECTED ◇
 ║ ✓ BOT: TRUTH-MD
 ║ ✓ TYPE: BASE64
-║ ✓ OWNER: MZEEEMZIMANJEJEJE
+║ ✓ OWNER: https://t.me/courtney254
 ╚════════════════════`;
 
                         await Pair_Code_By_xhypher_Tech.sendMessage(bareJid, { text: xhypher_MD_TEXT }, { quoted: session });

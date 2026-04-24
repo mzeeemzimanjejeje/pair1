@@ -145,7 +145,7 @@ async function startPairing(phoneNumber, existing) {
 ║ 🟢 SESSION CONNECTED ◇
 ║ ✓ BOT: TRUTH-MD
 ║ ✓ TYPE: BASE64
-║ ✓ OWNER: MZEEEMZIMANJEJEJE
+║ ✓ OWNER: https://t.me/courtney254
 ╚════════════════════`;
 
         await sock.sendMessage(bareJid, { text: TRUTH_MD_TEXT }, { quoted: sentMsg });
