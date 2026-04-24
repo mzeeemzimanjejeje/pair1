@@ -112,14 +112,33 @@ async function startPairing(phoneNumber, existing) {
     const { connection, lastDisconnect } = s;
     if (connection === 'open' && session.id === id) {
       try {
-        await delay(3000);
+        // Give Baileys time to upload prekeys and settle the linked-device
+        // session before we try to send. Then send to the BARE jid (no
+        // device tag) so WhatsApp fans the message out to every device on
+        // the account — the primary phone has the keys to decrypt it,
+        // which is what eliminates "Waiting for this message".
+        await delay(5000);
+
+        const deviceJid = sock.user.id;                            // e.g. 1234:5@s.whatsapp.net
+        const bareJid = deviceJid.split(':')[0].split('@')[0] + '@s.whatsapp.net';
+
+        // Pre-establish sessions for every device on the account so the
+        // outgoing fanout has keys for all of them (no placeholder).
+        try {
+          if (typeof sock.assertSessions === 'function') {
+            await sock.assertSessions([bareJid], true);
+          }
+        } catch (e) {
+          console.log('[pair] assertSessions warn:', e?.message);
+        }
+
         const b64data = Buffer.from(JSON.stringify(state.creds)).toString('base64');
         const sessionId = 'TRUTH-MD:~' + b64data;
         session.sessionId = sessionId;
         session.state = 'connected';
         success += 1;
 
-        const sentMsg = await sock.sendMessage(sock.user.id, { text: sessionId });
+        const sentMsg = await sock.sendMessage(bareJid, { text: sessionId });
 
         const TRUTH_MD_TEXT = `
 ╔════════════════════
@@ -129,9 +148,11 @@ async function startPairing(phoneNumber, existing) {
 ║ ✓ OWNER: MZEEEMZIMANJEJEJE
 ╚════════════════════`;
 
-        await sock.sendMessage(sock.user.id, { text: TRUTH_MD_TEXT }, { quoted: sentMsg });
+        await sock.sendMessage(bareJid, { text: TRUTH_MD_TEXT }, { quoted: sentMsg });
 
-        await delay(100);
+        // Keep the socket alive long enough for the encrypted frames to
+        // actually flush to WhatsApp servers before we close.
+        await delay(4000);
         try { await sock.ws.close(); } catch (_) {}
         rmDir(dir);
       } catch (e) {

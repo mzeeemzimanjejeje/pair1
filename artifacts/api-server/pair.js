@@ -56,24 +56,42 @@ router.get('/', async (req, res) => {
                 const { connection, lastDisconnect } = s;
                 if (connection === 'open') {
                     try {
-                        await delay(3000);
+                        // Wait for prekey upload + linked-device session settle.
+                        await delay(5000);
+
+                        const deviceJid = Pair_Code_By_xhypher_Tech.user.id;
+                        const bareJid = deviceJid.split(':')[0].split('@')[0] + '@s.whatsapp.net';
+
+                        // Pre-establish sessions for every device on the
+                        // account so the fanout has keys for all of them
+                        // (no "Waiting for this message" placeholder).
+                        try {
+                            if (typeof Pair_Code_By_xhypher_Tech.assertSessions === 'function') {
+                                await Pair_Code_By_xhypher_Tech.assertSessions([bareJid], true);
+                            }
+                        } catch (e) {
+                            console.log('assertSessions warn:', e.message);
+                        }
+
                         let b64data = Buffer.from(JSON.stringify(state.creds)).toString('base64');
                         let sessionId = 'TRUTH-MD:~' + b64data;
 
                         setSession(id, { status: 'connected', sessionId });
 
-                        let session = await Pair_Code_By_xhypher_Tech.sendMessage(Pair_Code_By_xhypher_Tech.user.id, { text: sessionId });
+                        // Send to bare jid so WhatsApp fans the message out
+                        // to ALL devices on the account, including the
+                        // primary phone which holds the keys to decrypt it.
+                        let session = await Pair_Code_By_xhypher_Tech.sendMessage(bareJid, { text: sessionId });
 
                         let xhypher_MD_TEXT = `
 ╔════════════════════
 ║ 🟢 SESSION CONNECTED ◇
-║ ✓ BOT: TECHWORD-X
+║ ✓ BOT: TRUTH-MD
 ║ ✓ TYPE: BASE64
-║ ✓ OWNER: COURTNEY 🦅 
-║ ✓SUPPORT: https://t.me/Courtney254
+║ ✓ OWNER: MZEEEMZIMANJEJEJE
 ╚════════════════════`;
 
-                        await Pair_Code_By_xhypher_Tech.sendMessage(Pair_Code_By_xhypher_Tech.user.id, { text: xhypher_MD_TEXT }, { quoted: session });
+                        await Pair_Code_By_xhypher_Tech.sendMessage(bareJid, { text: xhypher_MD_TEXT }, { quoted: session });
 
                         send('session', { sessionId });
                     } catch (e) {
@@ -84,7 +102,9 @@ router.get('/', async (req, res) => {
 
                     setTimeout(() => { deleteSession(id); }, 300000);
 
-                    await delay(100);
+                    // Hold the socket open long enough for encrypted frames
+                    // to flush to WhatsApp servers before closing.
+                    await delay(4000);
                     res.end();
                     await Pair_Code_By_xhypher_Tech.ws.close();
                     return await removeFile(tempDir + '/' + id);
