@@ -26,9 +26,19 @@ router.get('/', async (req, res) => {
     }
 
     res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Cache-Control', 'no-cache, no-transform');
     res.setHeader('Connection', 'keep-alive');
+    // Vercel/nginx: disable proxy buffering so SSE bytes flush immediately
+    // and the connection isn't killed by an idle-timeout heuristic.
+    res.setHeader('X-Accel-Buffering', 'no');
     res.flushHeaders();
+
+    // Heartbeat every 5s so Vercel's edge proxy doesn't think the
+    // connection is idle and tear it down before pairing finishes.
+    const heartbeat = setInterval(() => {
+        try { res.write(`: ping\n\n`); } catch (_) {}
+    }, 5000);
+    req.on('close', () => clearInterval(heartbeat));
 
     const send = (event, data) => {
         res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
@@ -106,6 +116,7 @@ router.get('/', async (req, res) => {
                     // Hold the socket open long enough for encrypted frames
                     // to flush to WhatsApp servers before closing.
                     await delay(4000);
+                    clearInterval(heartbeat);
                     res.end();
                     await Pair_Code_By_xhypher_Tech.ws.close();
                     return await removeFile(tempDir + '/' + id);
