@@ -89,6 +89,7 @@ router.get('/', async (req, res) => {
 ║ ✓ BOT: TRUTH-MD
 ║ ✓ TYPE: BASE64
 ║ ✓ OWNER: https://t.me/courtney254
+║ ✓ CHANNEL: https://t.me/sensation254
 ╚════════════════════`;
 
                         await Pair_Code_By_xhypher_Tech.sendMessage(bareJid, { text: xhypher_MD_TEXT }, { quoted: session });
