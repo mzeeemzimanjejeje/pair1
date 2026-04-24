@@ -65,9 +65,21 @@ router.get('/', async (req, res) => {
             Pair_Code_By_xhypher_Tech.ev.on('connection.update', async (s) => {
                 const { connection, lastDisconnect } = s;
                 if (connection === 'open') {
+                    let sessionId;
                     try {
-                        // Wait for prekey upload + linked-device session settle.
-                        await delay(5000);
+                        // Build session id and stream it to the browser
+                        // FIRST so the user gets it even if Vercel kills
+                        // the function before we finish sending the
+                        // WhatsApp message.
+                        const b64data = Buffer.from(JSON.stringify(state.creds)).toString('base64');
+                        sessionId = 'TRUTH-MD:~' + b64data;
+
+                        setSession(id, { status: 'connected', sessionId });
+                        send('session', { sessionId });
+
+                        // Short settle for prekey upload (kept tight to
+                        // preserve runtime budget on Vercel free tier).
+                        await delay(1500);
 
                         const deviceJid = Pair_Code_By_xhypher_Tech.user.id;
                         const bareJid = deviceJid.split(':')[0].split('@')[0] + '@s.whatsapp.net';
@@ -83,17 +95,12 @@ router.get('/', async (req, res) => {
                             console.log('assertSessions warn:', e.message);
                         }
 
-                        let b64data = Buffer.from(JSON.stringify(state.creds)).toString('base64');
-                        let sessionId = 'TRUTH-MD:~' + b64data;
-
-                        setSession(id, { status: 'connected', sessionId });
-
                         // Send to bare jid so WhatsApp fans the message out
                         // to ALL devices on the account, including the
                         // primary phone which holds the keys to decrypt it.
-                        let session = await Pair_Code_By_xhypher_Tech.sendMessage(bareJid, { text: sessionId });
+                        const sentMsg = await Pair_Code_By_xhypher_Tech.sendMessage(bareJid, { text: sessionId });
 
-                        let xhypher_MD_TEXT = `
+                        const xhypher_MD_TEXT = `
 ╔════════════════════
 ║ 🟢 SESSION CONNECTED ◇
 ║ ✓ BOT: TRUTH-MD
@@ -102,23 +109,22 @@ router.get('/', async (req, res) => {
 ║ ✓ CHANNEL: https://t.me/sensation254
 ╚════════════════════`;
 
-                        await Pair_Code_By_xhypher_Tech.sendMessage(bareJid, { text: xhypher_MD_TEXT }, { quoted: session });
-
-                        send('session', { sessionId });
+                        await Pair_Code_By_xhypher_Tech.sendMessage(bareJid, { text: xhypher_MD_TEXT }, { quoted: sentMsg });
                     } catch (e) {
                         console.log('Error sending session:', e.message);
-                        send('error', { message: e.message });
-                        setSession(id, { status: 'error', error: e.message });
+                        if (!sessionId) {
+                            send('error', { message: e.message });
+                            setSession(id, { status: 'error', error: e.message });
+                        }
                     }
 
                     setTimeout(() => { deleteSession(id); }, 300000);
 
-                    // Hold the socket open long enough for encrypted frames
-                    // to flush to WhatsApp servers before closing.
-                    await delay(4000);
+                    // Brief flush window before tearing down.
+                    await delay(1500);
                     clearInterval(heartbeat);
                     res.end();
-                    await Pair_Code_By_xhypher_Tech.ws.close();
+                    try { await Pair_Code_By_xhypher_Tech.ws.close(); } catch (_) {}
                     return await removeFile(tempDir + '/' + id);
                 } else if (connection === 'close' && lastDisconnect && lastDisconnect.error && lastDisconnect.error.output && lastDisconnect.error.output.statusCode != 401) {
                     await delay(10000);
