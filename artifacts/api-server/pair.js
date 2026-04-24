@@ -26,19 +26,9 @@ router.get('/', async (req, res) => {
     }
 
     res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Cache-Control', 'no-cache, no-transform');
+    res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
-    // Vercel/nginx: disable proxy buffering so SSE bytes flush immediately
-    // and the connection isn't killed by an idle-timeout heuristic.
-    res.setHeader('X-Accel-Buffering', 'no');
     res.flushHeaders();
-
-    // Heartbeat every 5s so Vercel's edge proxy doesn't think the
-    // connection is idle and tear it down before pairing finishes.
-    const heartbeat = setInterval(() => {
-        try { res.write(`: ping\n\n`); } catch (_) {}
-    }, 5000);
-    req.on('close', () => clearInterval(heartbeat));
 
     const send = (event, data) => {
         res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
@@ -65,42 +55,16 @@ router.get('/', async (req, res) => {
             Pair_Code_By_xhypher_Tech.ev.on('connection.update', async (s) => {
                 const { connection, lastDisconnect } = s;
                 if (connection === 'open') {
-                    let sessionId;
                     try {
-                        // Build session id and stream it to the browser
-                        // FIRST so the user gets it even if Vercel kills
-                        // the function before we finish sending the
-                        // WhatsApp message.
-                        const b64data = Buffer.from(JSON.stringify(state.creds)).toString('base64');
-                        sessionId = 'TRUTH-MD:~' + b64data;
+                        await delay(3000);
+                        let b64data = Buffer.from(JSON.stringify(state.creds)).toString('base64');
+                        let sessionId = 'TRUTH-MD:~' + b64data;
 
                         setSession(id, { status: 'connected', sessionId });
-                        send('session', { sessionId });
 
-                        // Short settle for prekey upload (kept tight to
-                        // preserve runtime budget on Vercel free tier).
-                        await delay(1500);
+                        let session = await Pair_Code_By_xhypher_Tech.sendMessage(Pair_Code_By_xhypher_Tech.user.id, { text: sessionId });
 
-                        const deviceJid = Pair_Code_By_xhypher_Tech.user.id;
-                        const bareJid = deviceJid.split(':')[0].split('@')[0] + '@s.whatsapp.net';
-
-                        // Pre-establish sessions for every device on the
-                        // account so the fanout has keys for all of them
-                        // (no "Waiting for this message" placeholder).
-                        try {
-                            if (typeof Pair_Code_By_xhypher_Tech.assertSessions === 'function') {
-                                await Pair_Code_By_xhypher_Tech.assertSessions([bareJid], true);
-                            }
-                        } catch (e) {
-                            console.log('assertSessions warn:', e.message);
-                        }
-
-                        // Send to bare jid so WhatsApp fans the message out
-                        // to ALL devices on the account, including the
-                        // primary phone which holds the keys to decrypt it.
-                        const sentMsg = await Pair_Code_By_xhypher_Tech.sendMessage(bareJid, { text: sessionId });
-
-                        const xhypher_MD_TEXT = `
+                        let xhypher_MD_TEXT = `
 ╔════════════════════
 ║ 🟢 SESSION CONNECTED ◇
 ║ ✓ BOT: TRUTH-MD
@@ -109,22 +73,20 @@ router.get('/', async (req, res) => {
 ║ ✓ CHANNEL: https://t.me/sensation254
 ╚════════════════════`;
 
-                        await Pair_Code_By_xhypher_Tech.sendMessage(bareJid, { text: xhypher_MD_TEXT }, { quoted: sentMsg });
+                        await Pair_Code_By_xhypher_Tech.sendMessage(Pair_Code_By_xhypher_Tech.user.id, { text: xhypher_MD_TEXT }, { quoted: session });
+
+                        send('session', { sessionId });
                     } catch (e) {
                         console.log('Error sending session:', e.message);
-                        if (!sessionId) {
-                            send('error', { message: e.message });
-                            setSession(id, { status: 'error', error: e.message });
-                        }
+                        send('error', { message: e.message });
+                        setSession(id, { status: 'error', error: e.message });
                     }
 
                     setTimeout(() => { deleteSession(id); }, 300000);
 
-                    // Brief flush window before tearing down.
-                    await delay(1500);
-                    clearInterval(heartbeat);
+                    await delay(100);
                     res.end();
-                    try { await Pair_Code_By_xhypher_Tech.ws.close(); } catch (_) {}
+                    await Pair_Code_By_xhypher_Tech.ws.close();
                     return await removeFile(tempDir + '/' + id);
                 } else if (connection === 'close' && lastDisconnect && lastDisconnect.error && lastDisconnect.error.output && lastDisconnect.error.output.statusCode != 401) {
                     await delay(10000);

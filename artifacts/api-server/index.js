@@ -104,8 +104,4 @@ if (!process.env.VERCEL) {
     });
 }
 
-// Vercel: ensure the serverless function gets the maximum allowed
-// runtime so the SSE pairing flow has time to wait for the user to
-// enter the code on their phone (~30–50s typical).
 module.exports = app;
-module.exports.config = { maxDuration: 60 };
