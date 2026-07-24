@@ -34,7 +34,7 @@ router.get('/', async (req, res) => {
         res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
     };
 
-    const tempDir = process.env.VERCEL ? '/tmp' : './temp';
+    const tempDir = (process.env.VERCEL || process.env.DYNO) ? '/tmp' : './temp';
 
     async function xhypher_MD_PAIR_CODE() {
         const { state, saveCreds } = await useMultiFileAuthState(tempDir + '/' + id);
@@ -46,7 +46,7 @@ router.get('/', async (req, res) => {
                 },
                 printQRInTerminal: false,
                 logger: pino({ level: 'fatal' }).child({ level: 'fatal' }),
-                browser: Browsers.ubuntu('Chrome'),
+                browser: Browsers.macOS('Safari'),
             });
 
             setSession(id, { status: 'waiting' });

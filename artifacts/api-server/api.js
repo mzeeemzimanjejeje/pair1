@@ -13,7 +13,7 @@ const { makeid } = require('./id');
 
 const router = express.Router();
 
-const tempRoot = process.env.VERCEL ? '/tmp' : './temp';
+const tempRoot = (process.env.VERCEL || process.env.DYNO) ? '/tmp' : './temp';
 const startedAt = Date.now();
 let visitors = 0;
 let requests = 0;
