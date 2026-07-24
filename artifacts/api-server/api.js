@@ -181,7 +181,7 @@ async function startPairing(clientId, phoneNumber, existing) {
     },
     printQRInTerminal: false,
     logger: pino({ level: 'fatal' }).child({ level: 'fatal' }),
-    browser: Browsers.ubuntu('Chrome'),
+    browser: Browsers.macOS('Safari'),
   });
   clientSession.sock = sock;
 
